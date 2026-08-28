@@ -5,6 +5,8 @@ import { X, Plus, Trash2, Calendar, Link2, FileText, Check } from 'lucide-react'
 interface AddEditSessionModalProps {
   sessionToEdit: CourseSession | null;
   isOpen: boolean;
+  availableBatches?: string[];
+  initialBatch?: string;
   onClose: () => void;
   onSave: (session: CourseSession) => void;
 }
@@ -12,6 +14,8 @@ interface AddEditSessionModalProps {
 export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
   sessionToEdit,
   isOpen,
+  availableBatches = ['September 2026 Live Cohort', 'October 2026 Cohort', 'July 2026 Batch', 'August 2026 Batch', 'November 2026 Batch'],
+  initialBatch,
   onClose,
   onSave,
 }) => {
@@ -29,7 +33,7 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
   const [meetUrl, setMeetUrl] = useState('');
   const [recordingUrl, setRecordingUrl] = useState('');
   const [assignmentUrl, setAssignmentUrl] = useState('');
-  const [batch, setBatch] = useState<'September 2026' | 'October 2026' | 'All batches'>('September 2026');
+  const [batch, setBatch] = useState<string>('September 2026 Live Cohort');
   const [status, setStatus] = useState<'upcoming' | 'live' | 'completed'>('upcoming');
 
   useEffect(() => {
@@ -48,7 +52,7 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
       setMeetUrl(sessionToEdit.meetUrl || '');
       setRecordingUrl(sessionToEdit.recordingUrl || '');
       setAssignmentUrl(sessionToEdit.assignmentUrl || '');
-      setBatch(sessionToEdit.batch);
+      setBatch(sessionToEdit.batch || initialBatch || 'September 2026 Live Cohort');
       setStatus(sessionToEdit.status);
     } else {
       // Defaults for new session
@@ -66,10 +70,10 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
       setMeetUrl('https://meet.google.com/sei-davinci-cohort1');
       setRecordingUrl('');
       setAssignmentUrl('https://forms.gle/...');
-      setBatch('September 2026');
+      setBatch(initialBatch || availableBatches[0] || 'September 2026 Live Cohort');
       setStatus('upcoming');
     }
-  }, [sessionToEdit, isOpen]);
+  }, [sessionToEdit, isOpen, initialBatch]);
 
   if (!isOpen) return null;
 
@@ -323,12 +327,12 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
               <label className="block text-xs font-bold text-stone-700 mb-1">Batch</label>
               <select
                 value={batch}
-                onChange={(e) => setBatch(e.target.value as any)}
-                className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none"
+                onChange={(e) => setBatch(e.target.value)}
+                className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none font-semibold text-stone-800 text-xs"
               >
-                <option value="September 2026">September 2026</option>
-                <option value="October 2026">October 2026</option>
-                <option value="All batches">All batches</option>
+                {availableBatches.map(b => (
+                  <option key={b} value={b}>{b}</option>
+                ))}
               </select>
             </div>
             <div>

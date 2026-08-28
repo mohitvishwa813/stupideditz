@@ -50,7 +50,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    setErrorMsg('Invalid email or password. Use student@gmail.com / Student@123 or admin@gmail.com / Admin@123');
+    setErrorMsg('Invalid email or password. Please check your credentials.');
   };
 
   const handleRegister = (e: React.FormEvent) => {
@@ -182,9 +182,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative">
                 <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="text"
+                  type="email"
                   required
-                  placeholder="student@gmail.com or admin@gmail.com"
+                  placeholder="Enter your registered email"
                   value={email}
                   onChange={e => setEmail(e.target.value)}
                   className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -202,7 +202,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
                 <input
                   type="password"
                   required
-                  placeholder="Student@123 or Admin@123"
+                  placeholder="Enter your password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
                   className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500"
@@ -211,53 +211,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               </div>
             </div>
 
-            {/* Quick Demo Credentials Autofill */}
-            <div className="pt-1 pb-1">
-              <p className="text-[11px] font-semibold text-slate-400 mb-2 font-mono uppercase tracking-wider">
-                QUICK DEMO CREDENTIALS:
-              </p>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={autofillStudent}
-                  className="p-2 bg-emerald-500/10 hover:bg-emerald-500/15 border border-emerald-500/30 rounded-xl text-left transition-colors"
-                  id="quick-fill-student"
-                >
-                  <div className="flex items-center gap-1.5 text-emerald-400 text-xs font-semibold">
-                    <GraduationCap className="w-3.5 h-3.5" />
-                    Student Login
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
-                    student@gmail.com
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono">
-                    Student@123
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={autofillAdmin}
-                  className="p-2 bg-blue-500/10 hover:bg-blue-500/15 border border-blue-500/30 rounded-xl text-left transition-colors"
-                  id="quick-fill-admin"
-                >
-                  <div className="flex items-center gap-1.5 text-blue-400 text-xs font-semibold">
-                    <ShieldCheck className="w-3.5 h-3.5" />
-                    Admin Login
-                  </div>
-                  <div className="text-[10px] text-slate-400 font-mono mt-0.5 truncate">
-                    admin@gmail.com
-                  </div>
-                  <div className="text-[9px] text-slate-500 font-mono">
-                    Admin@123
-                  </div>
-                </button>
-              </div>
-            </div>
-
             <button
               type="submit"
-              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99]"
+              className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm rounded-xl shadow-xs flex items-center justify-center gap-2 transition-all active:scale-[0.99] mt-2"
               id="submit-signin-btn"
             >
               <span>Sign In & Continue</span>

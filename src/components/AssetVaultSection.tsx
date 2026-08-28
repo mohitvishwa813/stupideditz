@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VideoAsset, AssetCategory } from '../types';
+import { VideoAsset, AssetCategory, UserProfile } from '../types';
 import { 
   Download, 
   Play, 
@@ -23,11 +23,15 @@ import confetti from 'canvas-confetti';
 
 interface AssetVaultSectionProps {
   assets: VideoAsset[];
+  currentUser?: UserProfile | null;
+  onOpenLoginModal?: () => void;
   onSelectVideoBreakdown?: (videoTitle: string) => void;
 }
 
 export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   assets,
+  currentUser,
+  onOpenLoginModal,
   onSelectVideoBreakdown,
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
@@ -63,6 +67,14 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   };
 
   const handleDownload = (asset: VideoAsset) => {
+    if (!currentUser) {
+      soundFx.playGlitch();
+      if (onOpenLoginModal) {
+        onOpenLoginModal();
+      }
+      return;
+    }
+
     soundFx.playPop();
     setDownloadingId(asset.id);
     setTimeout(() => {
@@ -177,6 +189,13 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
             </div>
             <button 
               onClick={() => {
+                if (!currentUser) {
+                  soundFx.playGlitch();
+                  if (onOpenLoginModal) {
+                    onOpenLoginModal();
+                  }
+                  return;
+                }
                 soundFx.playPop();
                 window.open('https://drive.google.com/drive/folders/1qpg_kNvsxW46e_Zmdh4c0JDdTMrULQDV?usp=sharing', '_blank');
                 confetti({
@@ -218,22 +237,23 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
 
                   {/* Badges */}
                   <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/75 backdrop-blur-md text-[10px] font-semibold uppercase tracking-wider text-slate-200 border border-white/10">
+                    <span className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-black/85 backdrop-blur-md text-[10px] font-semibold uppercase tracking-wider text-slate-200 border border-white/10 shadow-md">
                       {getCategoryIcon(asset.category)}
                       {asset.category}
                     </span>
-                    <span className="px-2 py-1 rounded-lg bg-[#181d2f]/90 text-[10px] font-mono text-slate-300 border border-slate-700">
+                    <span className="px-2 py-1 rounded-lg bg-[#181d2f]/90 backdrop-blur-md text-[10px] font-mono text-slate-300 border border-slate-700">
                       {asset.format}
                     </span>
                   </div>
 
-                  <div className="absolute top-3 right-3">
+                  {/* Highlighted Price Badge */}
+                  <div className="absolute top-3 right-3 z-10">
                     {asset.isFreeSample ? (
-                      <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 text-[10px] font-bold uppercase tracking-wider">
+                      <span className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-400 text-slate-950 font-black border border-emerald-300/50 text-[10px] uppercase tracking-wider shadow-lg shadow-emerald-500/30 backdrop-blur-md">
                         FREE SAMPLE
                       </span>
                     ) : (
-                      <span className="px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-300 border border-blue-500/40 text-[10px] font-bold font-mono">
+                      <span className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-indigo-600 to-cyan-500 text-white font-black font-mono border border-cyan-400/50 text-xs tracking-wider shadow-xl shadow-blue-600/40 backdrop-blur-md">
                         ₹{asset.price} INR
                       </span>
                     )}

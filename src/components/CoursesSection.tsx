@@ -18,6 +18,7 @@ import {
 import { soundFx } from '../utils/soundEffects';
 
 interface CoursesSectionProps {
+  courses?: Course[];
   onSelectCourse: (course: Course) => void;
   onOpenEnroll: (courseId: string) => void;
   onOpenStudentPortal: (tab?: 'enrolled-courses' | 'classroom') => void;
@@ -25,16 +26,18 @@ interface CoursesSectionProps {
 }
 
 export const CoursesSection: React.FC<CoursesSectionProps> = ({
+  courses: coursesProp,
   onSelectCourse,
   onOpenEnroll,
   onOpenStudentPortal,
   currentUser
 }) => {
-  const [courses, setCourses] = useState<Course[]>(COURSES_CATALOG);
+  const [courses, setCourses] = useState<Course[]>([]);
 
   useEffect(() => {
     let isMounted = true;
     async function loadCourses() {
+      if (coursesProp && coursesProp.length > 0) return;
       try {
         const liveCourses = await DbService.getCourses();
         if (isMounted && liveCourses && liveCourses.length > 0) {
@@ -46,18 +49,21 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
     }
     loadCourses();
     return () => { isMounted = false; };
-  }, []);
+  }, [coursesProp]);
+
+  const activeCoursesList = (coursesProp && coursesProp.length > 0) ? coursesProp : (courses.length > 0 ? courses : COURSES_CATALOG);
+
   return (
     <section className="py-16 bg-[#0c0e18] text-slate-100 border-t border-slate-800" id="courses-section">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Section Header */}
         <div className="text-center max-w-3xl mx-auto mb-12">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-blue-500/15 text-blue-400 text-xs font-mono font-semibold uppercase tracking-wider mb-3 border border-blue-500/30">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 text-blue-400 text-xs font-mono font-bold uppercase tracking-wider mb-3 border border-blue-500/30 pulse-glow-border">
             <Flame className="w-3.5 h-3.5" />
             Professional Video Editing Cohorts
           </div>
           <h2 className="text-3xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Master Every Stage of the Video Pipeline
+            Master Every Stage of the <span className="animate-gradient-text">Video Pipeline</span>
           </h2>
           <p className="text-sm sm:text-base text-slate-400 mt-2.5">
             Interactive live classes taught by industry video editors. Select a cohort below to view full curriculum details and secure your seat.
@@ -66,13 +72,13 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
 
         {/* Courses Grid */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
-          {courses.map((course) => {
+          {activeCoursesList.map((course) => {
             const isEnrolled = currentUser?.enrolledCourses?.some(c => c.courseId === course.id);
 
             return (
               <div 
                 key={course.id}
-                className="bg-[#111422] border border-slate-800 hover:border-slate-700 rounded-2xl overflow-hidden shadow-lg flex flex-col justify-between transition-all duration-300 hover:-translate-y-1 hover:shadow-xl group"
+                className="glass-card glass-card-hover border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between transition-all duration-300 group"
                 id={`course-card-${course.id}`}
               >
                 <div>
@@ -159,11 +165,11 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
                 <div className="p-6 pt-0">
                   <div className="flex items-center justify-between mb-4">
                     <div>
-                      <span className="text-2xl font-extrabold text-white">
-                        ₹{(course.price * 80).toLocaleString('en-IN')}
+                      <span className="text-2xl font-extrabold text-white font-mono">
+                        ₹{course.price.toLocaleString('en-IN')}
                       </span>
                       <span className="text-xs text-slate-500 line-through ml-2 font-mono">
-                        ₹{(course.originalPrice * 80).toLocaleString('en-IN')}
+                        ₹{course.originalPrice.toLocaleString('en-IN')}
                       </span>
                     </div>
                     <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">

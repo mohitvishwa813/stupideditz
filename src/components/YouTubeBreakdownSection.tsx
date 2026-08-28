@@ -27,12 +27,12 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Header */}
         <div className="space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-500/15 text-rose-400 text-xs font-semibold font-mono border border-rose-500/30">
+          <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-rose-500/15 text-rose-400 text-xs font-semibold font-mono border border-rose-500/30 pulse-glow-border">
             <Tv className="w-3.5 h-3.5" />
             DOCUMENTARY & YOUTUBE DECONSTRUCTIONS
           </div>
           <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-            Behind the Timeline: Viral Edits Deconstructed
+            Behind the Timeline: <span className="animate-gradient-text">Viral Edits Deconstructed</span>
           </h2>
           <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
             Step frame-by-frame through real YouTube videos. See exact timestamps, node graphs, and download the exact assets used at each second.
@@ -51,9 +51,9 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
                   setSelectedBreakdown(item);
                   setActiveMarker(0);
                 }}
-                className={`text-left p-3.5 rounded-2xl border transition-all flex items-start gap-3.5 group ${
+                className={`text-left p-3.5 rounded-2xl border transition-all flex items-start gap-3.5 group glass-card-hover ${
                   isSelected
-                    ? 'bg-[#151928] border-blue-500 shadow-xs'
+                    ? 'bg-[#151928] border-blue-500 shadow-lg shadow-blue-500/20'
                     : 'bg-[#10131e] border-slate-800 hover:border-slate-700 hover:bg-[#141824]'
                 }`}
                 id={`breakdown-select-${item.id}`}
@@ -84,7 +84,7 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
         </div>
 
         {/* Interactive Breakdown Player & Inspector */}
-        <div className="p-6 rounded-2xl bg-[#111422] border border-slate-800 grid grid-cols-1 lg:grid-cols-12 gap-6 items-start shadow-xl">
+        <div className="p-6 rounded-2xl glass-card border border-slate-700/70 pulse-glow-border grid grid-cols-1 lg:grid-cols-12 gap-6 items-start shadow-2xl">
           {/* Video Column */}
           <div className="lg:col-span-7 space-y-4">
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-lg">

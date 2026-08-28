@@ -6,22 +6,20 @@ import { soundFx } from '../../utils/soundEffects';
 interface EditStudentModalProps {
   isOpen: boolean;
   student: RegisteredStudent | null;
+  availableBatches?: string[];
   onClose: () => void;
   onSave: (updatedStudent: RegisteredStudent) => void;
 }
 
-const BATCH_OPTIONS = [
-  'July 2026 Cohort',
-  'August 2026 Cohort',
+const DEFAULT_BATCHES = [
   'September 2026 Live Cohort',
   'October 2026 Cohort',
-  'November 2026 Cohort',
-  'December 2026 Cohort',
 ];
 
 export const EditStudentModal: React.FC<EditStudentModalProps> = ({
   isOpen,
   student,
+  availableBatches = DEFAULT_BATCHES,
   onClose,
   onSave,
 }) => {
@@ -129,7 +127,7 @@ export const EditStudentModal: React.FC<EditStudentModalProps> = ({
                 onChange={e => setBatch(e.target.value)}
                 className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500"
               >
-                {BATCH_OPTIONS.map(b => (
+                {availableBatches.map(b => (
                   <option key={b} value={b}>{b}</option>
                 ))}
               </select>

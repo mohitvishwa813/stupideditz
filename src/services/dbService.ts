@@ -15,16 +15,64 @@ import { COURSES_CATALOG, DEFAULT_ENROLLED_COURSES } from '../data/coursesData';
 import { DEFAULT_ADMIN_USER, DEFAULT_STUDENT_USER } from './storageService';
 
 export class DbService {
+  // Ensure Turso database tables exist
+  static async initCourseTables() {
+    try {
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS courses (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          subtitle TEXT,
+          description TEXT,
+          batch_name TEXT,
+          price REAL NOT NULL,
+          original_price REAL,
+          rating REAL DEFAULT 4.98,
+          level TEXT,
+          thumbnail_url TEXT,
+          instructor_name TEXT,
+          instructor_role TEXT,
+          is_popular INTEGER DEFAULT 0,
+          is_published INTEGER DEFAULT 1,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+      try {
+        await turso.execute(`ALTER TABLE courses ADD COLUMN batch_name TEXT`);
+      } catch {
+        // Column may already exist
+      }
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS course_highlights (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          course_id TEXT NOT NULL,
+          highlight_text TEXT NOT NULL,
+          display_order INTEGER DEFAULT 1
+        )
+      `);
+    } catch (e) {
+      console.warn('Turso tables initialization note:', e);
+    }
+  }
+
   // Fetch Courses Catalog from Turso
   static async getCourses(): Promise<Course[]> {
     try {
-      const coursesRes = await turso.execute('SELECT * FROM courses WHERE is_published = 1 ORDER BY created_at ASC');
-      if (coursesRes.rows.length === 0) return COURSES_CATALOG;
+      await this.initCourseTables();
+      let coursesRes = await turso.execute('SELECT * FROM courses');
+
+      // Auto-seed Turso DB if table is empty
+      if (coursesRes.rows.length === 0) {
+        console.log('⚡ [Turso DB] Empty courses table detected. Auto-seeding initial catalog to Turso Cloud DB...');
+        for (const course of COURSES_CATALOG) {
+          await this.saveCourseToDb(course);
+        }
+        coursesRes = await turso.execute('SELECT * FROM courses');
+      }
 
       const highlightsRes = await turso.execute('SELECT * FROM course_highlights ORDER BY display_order ASC');
       const tagsRes = await turso.execute('SELECT * FROM course_tags');
-
-      console.log(`⚡ [Turso DB] Successfully fetched ${coursesRes.rows.length} courses live from Turso Cloud!`);
 
       return coursesRes.rows.map((r: any) => {
         const courseId = String(r.id);
@@ -39,13 +87,13 @@ export class DbService {
           id: courseId,
           title: String(r.title),
           subtitle: String(r.subtitle || ''),
-          batch: 'September 2026 Live Cohort',
+          batch: String(r.batch_name || r.batch || 'September 2026 Live Cohort'),
           startDate: '15 Sep 2026',
           totalDays: 26,
           durationWeeks: 6,
           price: Number(r.price),
           originalPrice: Number(r.original_price || r.price * 2),
-          rating: Number(r.rating || 4.9),
+          rating: Number(r.rating || 4.98),
           reviewsCount: Number(r.reviews_count || 100),
           studentsCount: Number(r.students_count || 500),
           level: String(r.level || 'Beginner to Advanced Pro'),
@@ -63,8 +111,109 @@ export class DbService {
         };
       });
     } catch (err) {
-      console.warn('Using fallback courses due to DB query error:', err);
+      console.warn('Turso DB getCourses error:', err);
       return COURSES_CATALOG;
+    }
+  }
+
+  // Create or Update Masterclass Course in Turso Cloud Database
+  static async saveCourseToDb(course: Course): Promise<boolean> {
+    try {
+      await this.initCourseTables();
+
+      // Check if course row exists by exact ID
+      const existing = await turso.execute({
+        sql: `SELECT id FROM courses WHERE id = ? OR id = CAST(? AS INTEGER)`,
+        args: [course.id, isNaN(Number(course.id)) ? -99999 : Number(course.id)]
+      });
+
+      if (existing.rows.length > 0) {
+        const targetId = existing.rows[0].id;
+        await turso.execute({
+          sql: `UPDATE courses SET
+            title = ?,
+            subtitle = ?,
+            description = ?,
+            batch_name = ?,
+            price = ?,
+            original_price = ?,
+            level = ?,
+            thumbnail_url = ?,
+            instructor_name = ?,
+            instructor_role = ?,
+            is_popular = ?
+          WHERE id = ?`,
+          args: [
+            course.title,
+            course.subtitle || '',
+            course.description || '',
+            course.batch || 'September 2026 Live Cohort',
+            course.price,
+            course.originalPrice || course.price * 2,
+            course.level || 'Beginner to Advanced Pro',
+            course.thumbnail,
+            course.instructorName || 'Arjun Rajput',
+            course.instructorRole || 'Lead Editor',
+            course.isPopular ? 1 : 0,
+            targetId
+          ]
+        });
+      } else {
+        await turso.execute({
+          sql: `INSERT INTO courses (
+            id, title, subtitle, description, batch_name, price, original_price, rating, level, thumbnail_url, instructor_name, instructor_role, is_popular, is_published
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+          args: [
+            course.id,
+            course.title,
+            course.subtitle || '',
+            course.description || '',
+            course.batch || 'September 2026 Live Cohort',
+            course.price,
+            course.originalPrice || course.price * 2,
+            course.rating || 4.98,
+            course.level || 'Beginner to Advanced Pro',
+            course.thumbnail,
+            course.instructorName || 'Arjun Rajput',
+            course.instructorRole || 'Lead Editor',
+            course.isPopular ? 1 : 0
+          ]
+        });
+      }
+
+      // Also sync highlights to course_highlights table if present
+      if (course.highlights && course.highlights.length > 0) {
+        await turso.execute({
+          sql: `DELETE FROM course_highlights WHERE course_id = ? OR course_id = CAST(? AS INTEGER)`,
+          args: [course.id, isNaN(Number(course.id)) ? 0 : Number(course.id)]
+        });
+        for (let i = 0; i < course.highlights.length; i++) {
+          await turso.execute({
+            sql: `INSERT INTO course_highlights (course_id, highlight_text, display_order) VALUES (?, ?, ?)`,
+            args: [course.id, course.highlights[i], i + 1]
+          });
+        }
+      }
+
+      console.log(`⚡ [Turso DB] Successfully updated course "${course.title}" (Price: ₹${course.price}) in Turso Cloud DB!`);
+      return true;
+    } catch (err) {
+      console.warn('Failed saving course to Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Delete Masterclass Course from Turso Cloud Database
+  static async deleteCourseFromDb(courseId: string): Promise<boolean> {
+    try {
+      await turso.execute({
+        sql: `DELETE FROM courses WHERE id = ?`,
+        args: [courseId]
+      });
+      return true;
+    } catch (err) {
+      console.warn('Failed deleting course from Turso DB:', err);
+      return false;
     }
   }
 
@@ -73,8 +222,6 @@ export class DbService {
     try {
       const res = await turso.execute('SELECT * FROM course_sessions ORDER BY date_iso ASC');
       if (res.rows.length === 0) return INITIAL_SESSIONS;
-
-      console.log(`⚡ [Turso DB] Successfully fetched ${res.rows.length} curriculum sessions live from Turso Cloud!`);
 
       return res.rows.map((r: any) => ({
         id: String(r.id),
@@ -219,6 +366,106 @@ export class DbService {
     }
   }
 
+  // Ensure students table exists
+  static async initStudentTable() {
+    try {
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS students (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL,
+          email TEXT NOT NULL,
+          batch_name TEXT NOT NULL,
+          enrolled_at TEXT,
+          status TEXT DEFAULT 'Active',
+          completed_days INTEGER DEFAULT 0,
+          avatar_url TEXT
+        )
+      `);
+    } catch (e) {
+      console.warn('Turso student table init note:', e);
+    }
+  }
+
+  // Fetch Students Roster from Turso
+  static async getStudents(): Promise<RegisteredStudent[]> {
+    try {
+      await this.initStudentTable();
+      let res = await turso.execute('SELECT * FROM students');
+
+      // Auto-seed if empty
+      if (res.rows.length === 0) {
+        console.log('⚡ [Turso DB] Empty students table. Auto-seeding initial students to Turso DB...');
+        for (const st of INITIAL_STUDENTS) {
+          await this.saveStudentToDb(st);
+        }
+        res = await turso.execute('SELECT * FROM students');
+      }
+
+      return res.rows.map((r: any) => ({
+        id: String(r.id),
+        name: String(r.name),
+        email: String(r.email),
+        batch: String(r.batch_name || 'September 2026 Live Cohort'),
+        enrolledAt: String(r.enrolled_at || new Date().toISOString().split('T')[0]),
+        status: String(r.status || 'Active') as any,
+        completedDays: Number(r.completed_days || 0),
+        avatar: String(r.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80')
+      }));
+    } catch (err) {
+      console.warn('Failed loading students from Turso DB:', err);
+      return INITIAL_STUDENTS;
+    }
+  }
+
+  // Save / Update Student in Turso DB
+  static async saveStudentToDb(student: RegisteredStudent): Promise<boolean> {
+    try {
+      await this.initStudentTable();
+      await turso.execute({
+        sql: `INSERT INTO students (
+          id, name, email, batch_name, enrolled_at, status, completed_days, avatar_url
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          name = excluded.name,
+          email = excluded.email,
+          batch_name = excluded.batch_name,
+          enrolled_at = excluded.enrolled_at,
+          status = excluded.status,
+          completed_days = excluded.completed_days,
+          avatar_url = excluded.avatar_url`,
+        args: [
+          student.id,
+          student.name,
+          student.email,
+          student.batch,
+          student.enrolledAt || new Date().toISOString().split('T')[0],
+          student.status || 'Active',
+          student.completedDays || 0,
+          student.avatar || ''
+        ]
+      });
+      console.log(`⚡ [Turso DB] Saved student "${student.name}" (Batch: ${student.batch}) to Turso DB!`);
+      return true;
+    } catch (err) {
+      console.error('Failed saving student to Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Delete Student from Turso DB
+  static async deleteStudentFromDb(studentId: string): Promise<boolean> {
+    try {
+      await turso.execute({
+        sql: `DELETE FROM students WHERE id = ?`,
+        args: [studentId]
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed deleting student from Turso DB:', err);
+      return false;
+    }
+  }
+
   // Authenticate user against Turso Cloud Database
   static async authenticateUser(emailInput: string, passwordInput: string): Promise<UserProfile | null> {
     try {
@@ -230,7 +477,6 @@ export class DbService {
 
       if (res.rows.length > 0) {
         const row: any = res.rows[0];
-        console.log(`⚡ [Turso DB] Authenticated user ${row.email} (${row.role}) directly from Turso Cloud!`);
         return {
           id: String(row.id),
           name: String(row.full_name),

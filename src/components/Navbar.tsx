@@ -60,31 +60,33 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-50 w-full bg-[#0b0d14]/95 backdrop-blur-xl border-b border-slate-800 text-slate-100 shadow-md">
-      {/* Top Notification Announcement Bar */}
-      <div className="bg-[#0e111c] border-b border-slate-800/80 text-slate-300 px-4 py-1.5 text-[11px] sm:text-xs font-medium flex items-center justify-between">
-        <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 overflow-hidden truncate">
-            <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold shrink-0">
-              Next Cohort
-            </span>
-            <span className="truncate text-slate-300">
-              September 2026 Live Masterclass — <strong className="text-white font-semibold">26 Days of DaVinci Resolve Mastery</strong>
-            </span>
+      {/* Top Notification Announcement Bar (Hidden - Code Preserved) */}
+      {false && (
+        <div className="bg-[#0e111c] border-b border-slate-800/80 text-slate-300 px-4 py-1.5 text-[11px] sm:text-xs font-medium flex items-center justify-between">
+          <div className="max-w-7xl mx-auto w-full flex items-center justify-between gap-2">
+            <div className="flex items-center gap-2 overflow-hidden truncate">
+              <span className="bg-blue-500/15 text-blue-400 border border-blue-500/30 px-2 py-0.5 rounded-md text-[10px] font-mono uppercase tracking-wider font-semibold shrink-0">
+                Next Cohort
+              </span>
+              <span className="truncate text-slate-300">
+                September 2026 Live Masterclass — <strong className="text-white font-semibold">26 Days of DaVinci Resolve Mastery</strong>
+              </span>
+            </div>
+            {onOpenEnroll && (
+              <button 
+                onClick={() => {
+                  soundFx.playClick();
+                  onOpenEnroll();
+                }}
+                className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-3 py-0.5 rounded-md text-[11px] font-semibold transition-all shadow-xs"
+                id="topbar-enroll-btn"
+              >
+                Enroll Now →
+              </button>
+            )}
           </div>
-          {onOpenEnroll && (
-            <button 
-              onClick={() => {
-                soundFx.playClick();
-                onOpenEnroll();
-              }}
-              className="shrink-0 bg-blue-600 hover:bg-blue-500 text-white px-3 py-0.5 rounded-md text-[11px] font-semibold transition-all shadow-xs"
-              id="topbar-enroll-btn"
-            >
-              Enroll Now →
-            </button>
-          )}
         </div>
-      </div>
+      )}
 
       {/* Main Header Bar */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">

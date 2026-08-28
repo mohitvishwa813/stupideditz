@@ -30,6 +30,7 @@ interface HeroSectionProps {
   onOpenStudentPortal: (tab?: 'enrolled-courses' | 'classroom') => void;
   onOpenEnroll: (courseId?: string) => void;
   currentUser: UserProfile | null;
+  sessionsCount?: number;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -37,8 +38,12 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onExploreAssets,
   onOpenStudentPortal,
   onOpenEnroll,
-  currentUser
+  currentUser,
+  sessionsCount
 }) => {
+  // Compute total cohort days dynamically from database sessions list
+  const totalDaysCount = sessionsCount && sessionsCount > 0 ? sessionsCount : 26;
+
   // Interactive DaVinci Studio Workbench State (Clean desktop view, no phone frames)
   const [selectedLut, setSelectedLut] = useState<'raw' | 'teal-orange' | 'kodak' | 'cyberpunk'>('teal-orange');
   const [activeTab, setActiveTab] = useState<'timeline' | 'nodes' | 'fairlight'>('timeline');
@@ -63,47 +68,50 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   };
 
   return (
-    <section className="relative pt-6 pb-16 md:pt-12 md:pb-20 overflow-hidden bg-[#090a0f] text-slate-100">
-      {/* Background Subtle Ambient Tone */}
-      <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[300px] bg-blue-600/5 blur-[120px] rounded-full pointer-events-none" />
+    <section className="relative pt-8 pb-16 md:pt-14 md:pb-24 overflow-hidden bg-[#07090e] text-slate-100">
+      {/* Dynamic Ambient Glowing Aura Lights */}
+      <div className="absolute top-10 left-1/2 -translate-x-1/2 w-[800px] h-[400px] glow-spot-blue blur-[130px] rounded-full pointer-events-none animate-float" />
+      <div className="absolute top-40 left-1/4 w-[450px] h-[250px] glow-spot-emerald blur-[110px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
         {/* Top Cohort Announcement Pill */}
         <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2.5 px-4 py-1.5 rounded-full bg-[#121522] border border-slate-800 shadow-xs text-xs font-semibold text-slate-300">
-            <span className="flex h-2 w-2 relative">
+          <div className="inline-flex items-center gap-2.5 px-4.5 py-1.5 rounded-full bg-[#121626]/80 backdrop-blur-md border border-slate-700/60 shadow-xl text-xs font-semibold text-slate-300 pulse-glow-border hover:scale-105 transition-transform cursor-pointer"
+            onClick={onExploreCurriculum}
+          >
+            <span className="flex h-2.5 w-2.5 relative">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-blue-500"></span>
+              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
             </span>
             <span className="text-white font-medium">Registration Open for September 2026 Batch</span>
             <span className="text-slate-600">•</span>
-            <span className="text-blue-400 font-mono font-semibold">26 Days Live Masterclass</span>
+            <span className="text-blue-400 font-mono font-bold">26 Days Live Masterclass</span>
           </div>
         </div>
 
         {/* Hero Main Headline & Value Proposition */}
-        <div className="text-center max-w-4xl mx-auto space-y-4">
+        <div className="text-center max-w-4xl mx-auto space-y-5">
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.12] text-white">
             Stop Cutting Boring Videos.{' '}
-            <span className="text-blue-400">
+            <span className="animate-gradient-text block sm:inline mt-1 sm:mt-0">
               Master High-Retention DaVinci Editing.
             </span>
           </h1>
 
           <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
             The complete 26-Day live cohort for creators and documentary editors. 
-            Learn rapid keyboard rough cuts, the <strong>Zem TV motion aesthetic</strong>, Hollywood node color grading, and Fairlight sound design.
+            Learn rapid keyboard rough cuts, the <strong className="text-emerald-400 font-semibold">Zem TV motion aesthetic</strong>, Hollywood node color grading, and Fairlight sound design.
           </p>
 
           {/* Primary Action Buttons */}
-          <div className="pt-3 flex flex-wrap items-center justify-center gap-3.5">
+          <div className="pt-4 flex flex-wrap items-center justify-center gap-3.5">
             {isEnrolled ? (
               <button
                 onClick={() => {
                   soundFx.playWhoosh();
                   onOpenStudentPortal('enrolled-courses');
                 }}
-                className="px-7 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm sm:text-base shadow-xs flex items-center gap-2.5 transition-all"
+                className="px-7 py-3.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-sm sm:text-base shadow-lg shadow-emerald-500/25 flex items-center gap-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 id="hero-enrolled-continue-btn"
               >
                 <GraduationCap className="w-5 h-5" />
@@ -116,7 +124,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                   soundFx.playWhoosh();
                   onOpenEnroll('course-davinci-26');
                 }}
-                className="px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-sm sm:text-base shadow-xs flex items-center gap-2.5 transition-all"
+                className="px-7 py-3.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm sm:text-base shadow-lg shadow-blue-600/30 flex items-center gap-2.5 transition-all hover:scale-[1.02] active:scale-[0.98]"
                 id="hero-enroll-cta"
               >
                 <Flame className="w-5 h-5 text-blue-200" />
@@ -130,7 +138,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 soundFx.playClick();
                 onExploreCurriculum();
               }}
-              className="px-6 py-3.5 rounded-xl bg-[#141826] hover:bg-[#1c2236] text-slate-200 hover:text-white border border-slate-700/80 font-semibold text-sm sm:text-base transition-all flex items-center gap-2"
+              className="px-6 py-3.5 rounded-xl bg-[#141826] hover:bg-[#1c2236] text-slate-200 hover:text-white border border-slate-700/80 font-semibold text-sm sm:text-base transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
               id="hero-curriculum-btn"
             >
               <Calendar className="w-4 h-4 text-blue-400" />
@@ -142,7 +150,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 soundFx.playClick();
                 onExploreAssets();
               }}
-              className="px-5 py-3.5 rounded-xl bg-[#111e1c] hover:bg-[#162926] text-emerald-400 border border-emerald-500/30 font-semibold text-sm transition-all flex items-center gap-2"
+              className="px-5 py-3.5 rounded-xl bg-[#111e1c] hover:bg-[#162926] text-emerald-400 border border-emerald-500/30 font-semibold text-sm transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
               id="hero-vault-btn"
             >
               <DownloadCloud className="w-4 h-4" />
@@ -172,7 +180,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
 
         {/* Studio Timeline & Color Grading Interactive Simulator (Clean Widescreen Desktop Card) */}
-        <div className="mt-10 max-w-5xl mx-auto bg-[#10131f] rounded-2xl border border-slate-800 shadow-xl overflow-hidden">
+        <div className="mt-12 max-w-5xl mx-auto glass-card rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden pulse-glow-border">
           {/* Header Controls */}
           <div className="bg-[#141828] px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
             <div className="flex items-center gap-3">
@@ -400,26 +408,21 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
           </div>
         </div>
 
-        {/* Metric Counter Bar */}
-        <div className="mt-12 grid grid-cols-2 md:grid-cols-4 gap-4 max-w-5xl mx-auto">
-          <div className="bg-[#111422] p-4 rounded-2xl border border-slate-800 text-center">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white">26 Days</div>
+        {/* Dynamic Metric Counter Bar */}
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
+          <div className="glass-card p-4 rounded-2xl border border-slate-700/60 text-center glass-card-hover">
+            <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{totalDaysCount} Days</div>
             <div className="text-xs text-slate-400 mt-1 font-medium">Live 90-Min Daily Cohort</div>
           </div>
 
-          <div className="bg-[#111422] p-4 rounded-2xl border border-slate-800 text-center">
+          <div className="glass-card p-4 rounded-2xl border border-slate-700/60 text-center glass-card-hover">
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">100% Live</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Saturday Doubt Clearing</div>
+            <div className="text-xs text-slate-400 mt-1 font-medium font-mono">Saturday Doubt Clearing</div>
           </div>
 
-          <div className="bg-[#111422] p-4 rounded-2xl border border-slate-800 text-center">
-            <div className="text-2xl sm:text-3xl font-extrabold text-blue-400">40 GB+</div>
+          <div className="glass-card p-4 rounded-2xl border border-slate-700/60 text-center glass-card-hover">
+            <div className="text-2xl sm:text-3xl font-extrabold text-blue-400">Creator Assets</div>
             <div className="text-xs text-slate-400 mt-1 font-medium">SFX, LUTs & Fusion Nodes</div>
-          </div>
-
-          <div className="bg-[#111422] p-4 rounded-2xl border border-slate-800 text-center">
-            <div className="text-2xl sm:text-3xl font-extrabold text-amber-400">4.98 ★</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">From 1,400+ Editors</div>
           </div>
         </div>
       </div>

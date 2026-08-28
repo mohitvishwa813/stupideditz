@@ -46,12 +46,12 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
         {/* Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
           <div className="space-y-2">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-blue-500/15 text-blue-400 text-xs font-semibold font-mono border border-blue-500/30">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-blue-500/15 text-blue-400 text-xs font-semibold font-mono border border-blue-500/30 pulse-glow-border">
               <Calendar className="w-3.5 h-3.5" />
               COMPLETE 26-DAY LIVE SYLLABUS
             </div>
             <h2 className="text-2xl sm:text-4xl font-extrabold text-white tracking-tight">
-              Syllabus Engineered for High-Retention Editing
+              Syllabus Engineered for <span className="animate-gradient-text">High-Retention Editing</span>
             </h2>
             <p className="text-xs sm:text-sm text-slate-400 max-w-2xl leading-relaxed">
               From zero to advanced DaVinci Resolve. Every Saturday features an intensive Doubt Clearing session with live timeline troubleshooting.
@@ -61,7 +61,7 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
           <div className="flex items-center gap-3">
             <button
               onClick={onOpenPortal}
-              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all shadow-xs shrink-0"
+              className="flex items-center gap-2 px-5 py-2.5 rounded-xl text-xs font-semibold text-slate-950 bg-emerald-400 hover:bg-emerald-300 transition-all shadow-lg shadow-emerald-500/20 shrink-0 hover:scale-105"
               id="curriculum-portal-btn"
             >
               <span>Student Learning Hub</span>
@@ -81,7 +81,7 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
               }}
               className={`p-3.5 rounded-xl border text-left transition-all ${
                 activeWeek === tab.num
-                  ? 'bg-[#151a2e] border-blue-500/70 shadow-xs'
+                  ? 'bg-[#151a2e] border-blue-500/70 shadow-lg shadow-blue-500/20 scale-[1.02]'
                   : 'bg-[#111420] border-slate-800 hover:border-slate-700 hover:bg-[#151928]'
               }`}
             >
@@ -107,12 +107,12 @@ export const CurriculumOverview: React.FC<CurriculumOverviewProps> = ({
             return (
               <div
                 key={session.id}
-                className={`p-5 rounded-2xl border transition-all ${
+                className={`p-5 rounded-2xl border transition-all glass-card-hover ${
                   isOff
                     ? 'bg-[#0e1017]/50 border-slate-800/60 text-slate-500'
                     : isDoubt
-                    ? 'bg-[#181613] border-amber-500/30 text-slate-200 shadow-xs'
-                    : 'bg-[#111422] border-slate-800 hover:border-slate-700 text-slate-200 shadow-xs'
+                    ? 'bg-[#181613] border-amber-500/30 text-slate-200 shadow-md'
+                    : 'glass-card border-slate-700/60 text-slate-200 shadow-md'
                 }`}
               >
                 <div className="flex items-center justify-between gap-2 mb-2">

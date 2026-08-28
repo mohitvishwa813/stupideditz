@@ -27,6 +27,7 @@ export default function App() {
   const [sessions, setSessions] = useState<CourseSession[]>(() => StorageService.getSessions());
   const [assets, setAssets] = useState<VideoAsset[]>(() => StorageService.getAssets());
   const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>(() => StorageService.getYouTubeBreakdowns());
+  const [courses, setCourses] = useState<Course[]>(() => StorageService.getCourses());
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getCurrentUser());
   
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -39,13 +40,16 @@ export default function App() {
     let isMounted = true;
     async function loadTursoData() {
       try {
-        const [dbSessions, dbBreakdowns] = await Promise.all([
+        const [dbSessions, dbBreakdowns, dbCourses, dbStudents] = await Promise.all([
           DbService.getSessions(),
-          DbService.getYouTubeBreakdowns()
+          DbService.getYouTubeBreakdowns(),
+          DbService.getCourses(),
+          DbService.getStudents()
         ]);
         if (isMounted) {
           if (dbSessions && dbSessions.length > 0) setSessions(dbSessions);
           if (dbBreakdowns && dbBreakdowns.length > 0) setYoutubeBreakdowns(dbBreakdowns);
+          if (dbCourses && dbCourses.length > 0) setCourses(dbCourses);
         }
       } catch (err) {
         console.warn('Failed loading data from Turso, using local defaults:', err);
@@ -63,6 +67,11 @@ export default function App() {
   const handleUpdateAssets = (newAssets: VideoAsset[]) => {
     setAssets(newAssets);
     StorageService.saveAssets(newAssets);
+  };
+
+  const handleUpdateCourses = (newCourses: Course[]) => {
+    setCourses(newCourses);
+    StorageService.saveCourses(newCourses);
   };
 
   const handleNavigate = (
@@ -135,6 +144,7 @@ export default function App() {
         {currentView === 'home' && (
           <>
             <HeroSection
+              sessionsCount={sessions.length}
               onExploreCurriculum={() => {
                 const elem = document.getElementById('courses-section');
                 if (elem) elem.scrollIntoView({ behavior: 'smooth' });
@@ -150,6 +160,7 @@ export default function App() {
 
             {/* Courses Masterclass Catalog */}
             <CoursesSection
+              courses={courses}
               onSelectCourse={(course) => handleOpenEnrollModal(course.id)}
               onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId)}
               onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
@@ -167,7 +178,11 @@ export default function App() {
 
             {/* Free Sample & Creator Asset Vault */}
             <div id="asset-vault-section">
-              <AssetVaultSection assets={assets} />
+              <AssetVaultSection
+                assets={assets}
+                currentUser={currentUser}
+                onOpenLoginModal={() => setIsLoginModalOpen(true)}
+              />
             </div>
 
             {/* YouTube & Documentary Breakdown Deconstructions */}
@@ -178,7 +193,11 @@ export default function App() {
         {/* STANDALONE ASSET VAULT VIEW */}
         {currentView === 'assets' && (
           <div className="pt-6">
-            <AssetVaultSection assets={assets} />
+            <AssetVaultSection
+              assets={assets}
+              currentUser={currentUser}
+              onOpenLoginModal={() => setIsLoginModalOpen(true)}
+            />
           </div>
         )}
 
@@ -212,6 +231,8 @@ export default function App() {
             onLogout={handleLogout}
             assets={assets}
             onUpdateAssets={handleUpdateAssets}
+            courses={courses}
+            onUpdateCourses={handleUpdateCourses}
           />
         )}
       </main>

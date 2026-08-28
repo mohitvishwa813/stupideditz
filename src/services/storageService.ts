@@ -5,7 +5,8 @@ import {
   RegisteredStudent, 
   StudentSubmission, 
   UserProfile,
-  EnrolledCourseInfo
+  EnrolledCourseInfo,
+  Course
 } from '../types';
 import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS } from '../data/initialData';
 import { COURSES_CATALOG, DEFAULT_ENROLLED_COURSES } from '../data/coursesData';
@@ -18,6 +19,7 @@ const STORAGE_KEYS = {
   SUBMISSIONS: 'stupideditz_submissions_v2',
   USER: 'stupideditz_user_v2',
   RATINGS: 'stupideditz_ratings_v2',
+  COURSES: 'stupideditz_courses_v2',
 };
 
 export const DEFAULT_STUDENT_USER: UserProfile = {
@@ -54,6 +56,37 @@ export const GUEST_USER: UserProfile = {
 };
 
 export class StorageService {
+  static getCourses(): Course[] {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.COURSES);
+      if (data) return JSON.parse(data);
+    } catch {
+      // fallback
+    }
+    this.saveCourses(COURSES_CATALOG);
+    return COURSES_CATALOG;
+  }
+
+  static saveCourses(courses: Course[]) {
+    try {
+      localStorage.setItem(STORAGE_KEYS.COURSES, JSON.stringify(courses));
+    } catch (e) {
+      console.error('Failed to save courses', e);
+    }
+  }
+
+  static addCourse(course: Course): Course[] {
+    const courses = this.getCourses();
+    const existingIndex = courses.findIndex(c => c.id === course.id);
+    if (existingIndex !== -1) {
+      courses[existingIndex] = course;
+    } else {
+      courses.unshift(course);
+    }
+    this.saveCourses(courses);
+    return courses;
+  }
+
   static getSessions(): CourseSession[] {
     try {
       const data = localStorage.getItem(STORAGE_KEYS.SESSIONS);
@@ -246,8 +279,8 @@ export class StorageService {
     } catch {
       // fallback
     }
-    // Return student by default so preview is rich, but allow switching to guest or logging in
-    return DEFAULT_STUDENT_USER;
+    // Default to null so unauthenticated visitors start as guest and see Sign In / Register buttons
+    return null;
   }
 
   static setCurrentUser(user: UserProfile | null) {

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile } from '../types';
+import React, { useState, useEffect } from 'react';
+import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course } from '../types';
 import { StorageService } from '../services/storageService';
 import { DbService } from '../services/dbService';
 import { 
@@ -31,13 +31,15 @@ import {
   CheckCircle2,
   BellRing,
   AlertCircle,
-  GraduationCap
+  GraduationCap,
+  BookOpen
 } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
 import { AddEditSessionModal } from './modals/AddEditSessionModal';
 import { AddStudentModal } from './modals/AddStudentModal';
 import { EditStudentModal } from './modals/EditStudentModal';
 import { EditAssetModal } from './modals/EditAssetModal';
+import { AddEditCourseModal } from './modals/AddEditCourseModal';
 import confetti from 'canvas-confetti';
 
 interface AdminConsoleProps {
@@ -48,6 +50,8 @@ interface AdminConsoleProps {
   onLogout: () => void;
   assets: VideoAsset[];
   onUpdateAssets: (assets: VideoAsset[]) => void;
+  courses: Course[];
+  onUpdateCourses: (courses: Course[]) => void;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
@@ -58,8 +62,10 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onLogout,
   assets,
   onUpdateAssets,
+  courses,
+  onUpdateCourses,
 }) => {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'submissions' | 'students' | 'assets' | 'broadcast'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'submissions' | 'students' | 'assets' | 'courses' | 'broadcast'>('schedule');
   const [selectedBatchFilter, setSelectedBatchFilter] = useState<'All' | 'September' | 'October'>('All');
   const [studentBatchFilter, setStudentBatchFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -73,32 +79,81 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Asset Modals & Actions
   const [assetToEdit, setAssetToEdit] = useState<VideoAsset | null>(null);
 
+  // Course Modals & Actions
+  const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
+  const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+
+  const handleSaveCourse = async (savedCourse: Course) => {
+    // 1. Instantly update Local Storage and React State so new course card & batch display immediately
+    const updatedList = StorageService.addCourse(savedCourse);
+    onUpdateCourses(updatedList);
+
+    // 2. Persist to Turso Cloud Database
+    await DbService.saveCourseToDb(savedCourse);
+
+    // 3. Re-fetch live courses directly from Turso Cloud Database
+    const liveCourses = await DbService.getCourses();
+    if (liveCourses && liveCourses.length >= updatedList.length) {
+      onUpdateCourses(liveCourses);
+    }
+    confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+  };
+
+  const handleDeleteCourse = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this masterclass course card?')) {
+      soundFx.playPop();
+      await DbService.deleteCourseFromDb(id);
+      const liveCourses = await DbService.getCourses();
+      onUpdateCourses(liveCourses);
+    }
+  };
+
   // Submissions and Students state
   const [submissions, setSubmissions] = useState<StudentSubmission[]>(() => StorageService.getSubmissions());
   const [students, setStudents] = useState<RegisteredStudent[]>(() => StorageService.getStudents());
   const [broadcastMessage, setBroadcastMessage] = useState('🔥 Doubt clearing session starts at 3:30 PM IST on Google Meet. Bring your timeline .dra files!');
   const [broadcastSentToast, setBroadcastSentToast] = useState(false);
 
+  // Sync Students live from Turso DB on mount
+  useEffect(() => {
+    let isMounted = true;
+    async function loadLiveStudents() {
+      try {
+        const dbStudents = await DbService.getStudents();
+        if (isMounted && dbStudents && dbStudents.length > 0) {
+          setStudents(dbStudents);
+        }
+      } catch (err) {
+        console.warn('Failed loading students from Turso:', err);
+      }
+    }
+    loadLiveStudents();
+    return () => { isMounted = false; };
+  }, []);
+
   // Student CRUD
-  const handleAddStudent = (newStudent: RegisteredStudent) => {
-    const updated = [newStudent, ...students];
-    setStudents(updated);
+  const handleAddStudent = async (newStudent: RegisteredStudent) => {
+    await DbService.saveStudentToDb(newStudent);
+    const fresh = await DbService.getStudents();
+    setStudents(fresh);
     StorageService.addStudent(newStudent);
     confetti({ particleCount: 40, spread: 60, origin: { y: 0.6 } });
   };
 
-  const handleSaveStudent = (updatedStudent: RegisteredStudent) => {
-    const updatedList = students.map(s => s.id === updatedStudent.id ? updatedStudent : s);
-    setStudents(updatedList);
-    StorageService.saveStudents(updatedList);
+  const handleSaveStudent = async (updatedStudent: RegisteredStudent) => {
+    await DbService.saveStudentToDb(updatedStudent);
+    const fresh = await DbService.getStudents();
+    setStudents(fresh);
+    StorageService.saveStudents(fresh);
   };
 
-  const handleDeleteStudent = (id: string) => {
+  const handleDeleteStudent = async (id: string) => {
     if (window.confirm('Are you sure you want to remove this student from the cohort roster?')) {
       soundFx.playPop();
-      const updatedList = students.filter(s => s.id !== id);
-      setStudents(updatedList);
-      StorageService.saveStudents(updatedList);
+      await DbService.deleteStudentFromDb(id);
+      const fresh = await DbService.getStudents();
+      setStudents(fresh);
+      StorageService.saveStudents(fresh);
     }
   };
 
@@ -116,10 +171,30 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     }
   };
 
-  // Filter students by batch
+  const [selectedBatchForNewSession, setSelectedBatchForNewSession] = useState<string>('');
+
+  // Masterclass Course Cards is the ONLY SINGLE SOURCE OF TRUTH for batches
+  const masterclassBatches = Array.from(new Set(
+    courses.map(c => c.batch).filter((b): b is string => Boolean(b && b.trim()))
+  ));
+
+  const dynamicCohortBatches = ['All', ...masterclassBatches];
+
+  // Helper for batch normalization
+  const normalizeBatch = (str: string) => str.toLowerCase().replace(/cohort|batch|live/g, '').trim();
+
+  // Filter students strictly by batch
   const filteredStudents = students.filter(st => {
     if (studentBatchFilter === 'All') return true;
-    return st.batch.toLowerCase().includes(studentBatchFilter.toLowerCase());
+    const filterNorm = normalizeBatch(studentBatchFilter);
+    const studentNorm = normalizeBatch(st.batch);
+    return (
+      st.batch === studentBatchFilter ||
+      studentNorm === filterNorm ||
+      st.batch.toLowerCase().includes(studentBatchFilter.toLowerCase()) ||
+      studentBatchFilter.toLowerCase().includes(st.batch.toLowerCase()) ||
+      (filterNorm.length > 0 && studentNorm.includes(filterNorm))
+    );
   });
 
   // Filter sessions based on batch & search
@@ -127,7 +202,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     const matchesBatch = 
       selectedBatchFilter === 'All' 
         ? true 
-        : session.batch.includes(selectedBatchFilter);
+        : (session.batch === selectedBatchFilter || session.batch.toLowerCase().includes(selectedBatchFilter.toLowerCase()));
     const matchesSearch = 
       session.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
       session.dayCode.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -135,8 +210,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     return matchesBatch && matchesSearch;
   });
 
-  const handleOpenAddSession = () => {
+  const handleOpenAddSession = (batchName?: string) => {
     soundFx.playClick();
+    if (batchName && batchName !== 'All') {
+      setSelectedBatchForNewSession(batchName);
+    } else {
+      setSelectedBatchForNewSession(masterclassBatches[0] || 'September 2026 Live Cohort');
+    }
     setSessionToEdit(null);
     setSessionModalOpen(true);
   };
@@ -217,6 +297,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             {/* Top Right Studio Actions */}
             <div className="flex items-center gap-2.5 flex-wrap">
               <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setCourseToEdit(null);
+                  setIsCourseModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5"
+                id="admin-add-course-btn"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Add Masterclass Card</span>
+              </button>
+
+              <button
                 onClick={handleOpenAddSession}
                 className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold transition-all shadow-xs flex items-center gap-1.5"
                 id="admin-add-session-btn"
@@ -282,6 +375,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           <div className="flex items-center gap-2 overflow-x-auto pb-1">
             {[
               { id: 'schedule', label: 'Class Curriculum Studio', icon: Calendar },
+              { id: 'courses', label: 'Masterclass Course Cards', icon: BookOpen },
               { id: 'submissions', label: 'Homework Grading Station', icon: Award },
               { id: 'students', label: 'Student Directory & CRM', icon: Users },
               { id: 'assets', label: 'Asset Vault Catalog', icon: FolderOpen },
@@ -315,35 +409,45 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           <div className="mt-6 space-y-6">
             {/* Filter bar */}
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-semibold text-slate-400 uppercase font-mono">Batch:</span>
-                {(['All', 'September', 'October'] as const).map(b => (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 max-w-full">
+                <span className="text-xs font-semibold text-slate-400 uppercase font-mono shrink-0">Batch:</span>
+                {dynamicCohortBatches.map(b => (
                   <button
                     key={b}
                     onClick={() => {
                       soundFx.playClick();
                       setSelectedBatchFilter(b);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                       selectedBatchFilter === b
-                        ? 'bg-blue-600 text-white'
+                        ? 'bg-blue-600 text-white shadow-xs'
                         : 'bg-[#121522] text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    {b} Cohort
+                    {b === 'All' ? 'All Cohorts' : b}
                   </button>
                 ))}
               </div>
 
-              <div className="relative w-full sm:w-64">
-                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
-                <input
-                  type="text"
-                  placeholder="Search sessions..."
-                  value={searchQuery}
-                  onChange={e => setSearchQuery(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#121522] border border-slate-700/80 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500"
-                />
+              <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                <div className="relative flex-1 sm:w-64">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Search sessions..."
+                    value={searchQuery}
+                    onChange={e => setSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-3 py-1.5 text-xs bg-[#121522] border border-slate-700/80 rounded-xl text-slate-200 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+
+                <button
+                  onClick={() => handleOpenAddSession(selectedBatchFilter !== 'All' ? selectedBatchFilter : undefined)}
+                  className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-bold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  <span>Add Class Session</span>
+                </button>
               </div>
             </div>
 
@@ -489,21 +593,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
               {/* Batch Filter Pills */}
               <div className="flex items-center gap-1.5 overflow-x-auto pb-1 pt-2 border-t border-slate-800">
-                <span className="text-xs font-semibold text-slate-400 uppercase font-mono mr-1">Batch:</span>
-                {['All', 'July', 'August', 'September', 'October', 'November'].map(b => (
+                <span className="text-xs font-semibold text-slate-400 uppercase font-mono mr-1 shrink-0">Batch:</span>
+                {dynamicCohortBatches.map(b => (
                   <button
                     key={b}
                     onClick={() => {
                       soundFx.playClick();
                       setStudentBatchFilter(b);
                     }}
-                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all ${
+                    className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all shrink-0 ${
                       studentBatchFilter === b
                         ? 'bg-emerald-500 text-slate-950 shadow-xs'
                         : 'bg-[#151928] text-slate-400 hover:text-white border border-slate-800'
                     }`}
                   >
-                    {b === 'All' ? 'All Batches' : `${b} Batch`}
+                    {b === 'All' ? 'All Batches' : b}
                   </button>
                 ))}
               </div>
@@ -679,6 +783,134 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           </div>
         )}
 
+        {/* TAB 2: MASTERCLASS COURSE CARDS CMS */}
+        {activeTab === 'courses' && (
+          <div className="mt-6 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white">
+                  Masterclass Cohort Catalog & Cards
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Create, update, and manage course cards displayed on the student landing page.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setCourseToEdit(null);
+                  setIsCourseModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-all shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create New Masterclass</span>
+              </button>
+            </div>
+
+            {/* Courses Interactive Data Table */}
+            <div className="bg-[#111422] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#161a2b] text-slate-400 font-mono uppercase tracking-wider border-b border-slate-800">
+                      <th className="py-3 px-4">Masterclass Course</th>
+                      <th className="py-3 px-4">Cohort Batch</th>
+                      <th className="py-3 px-4">Level</th>
+                      <th className="py-3 px-4">Offer Price</th>
+                      <th className="py-3 px-4">Instructor</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80 text-slate-200">
+                    {courses.map((course) => (
+                      <tr key={course.id} className="hover:bg-[#151928] transition-colors">
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={course.thumbnail}
+                              alt={course.title}
+                              className="w-12 h-8 rounded-lg object-cover bg-slate-900 border border-slate-700/60"
+                            />
+                            <div>
+                              <div className="font-bold text-white flex items-center gap-1.5">
+                                <span>{course.title}</span>
+                                {course.isPopular && (
+                                  <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 font-mono text-[9px]">
+                                    POPULAR
+                                  </span>
+                                )}
+                              </div>
+                              <div className="text-[11px] text-slate-400 truncate max-w-xs">{course.subtitle || course.description}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-slate-300">
+                          {course.batch}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="px-2 py-0.5 rounded-md bg-blue-500/10 text-blue-400 border border-blue-500/20 font-mono text-[10px]">
+                            {course.level}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono font-bold text-emerald-400">
+                          ₹{course.price.toLocaleString('en-IN')}
+                          {course.originalPrice && (
+                            <span className="text-[10px] text-slate-500 line-through ml-1 font-normal">
+                              ₹{course.originalPrice.toLocaleString('en-IN')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4 text-slate-300">
+                          {course.instructorName}
+                        </td>
+                        <td className="py-3.5 px-4 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              onClick={() => {
+                                soundFx.playClick();
+                                setSelectedBatchForNewSession(course.batch);
+                                setSelectedBatchFilter(course.batch);
+                                setSessionToEdit(null);
+                                setSessionModalOpen(true);
+                              }}
+                              className="px-2.5 py-1.5 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 text-emerald-400 border border-emerald-500/30 text-xs font-semibold transition-all flex items-center gap-1 shrink-0"
+                              title="Add new class session to this cohort curriculum"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Add to Curriculum</span>
+                            </button>
+
+                            <button
+                              onClick={() => {
+                                soundFx.playClick();
+                                setCourseToEdit(course);
+                                setIsCourseModalOpen(true);
+                              }}
+                              className="p-1.5 text-blue-400 hover:text-white hover:bg-blue-600/20 rounded-lg transition-colors"
+                              title="Edit Course Card"
+                            >
+                              <Edit3 className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCourse(course.id)}
+                              className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-600/20 rounded-lg transition-colors"
+                              title="Delete Course Card"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
         {/* TAB 5: BROADCASTER */}
         {activeTab === 'broadcast' && (
           <div className="mt-6 space-y-6">
@@ -723,8 +955,23 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         <AddEditSessionModal
           isOpen={sessionModalOpen}
           sessionToEdit={sessionToEdit}
+          availableBatches={dynamicCohortBatches.filter(b => b !== 'All')}
+          initialBatch={selectedBatchForNewSession}
           onClose={() => setSessionModalOpen(false)}
           onSave={handleSaveSession}
+        />
+      )}
+
+      {/* Add / Edit Masterclass Course Card Modal */}
+      {isCourseModalOpen && (
+        <AddEditCourseModal
+          isOpen={isCourseModalOpen}
+          courseToEdit={courseToEdit}
+          onClose={() => {
+            setIsCourseModalOpen(false);
+            setCourseToEdit(null);
+          }}
+          onSave={handleSaveCourse}
         />
       )}
 
@@ -732,6 +979,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       {isAddStudentModalOpen && (
         <AddStudentModal
           isOpen={isAddStudentModalOpen}
+          availableBatches={dynamicCohortBatches.filter(b => b !== 'All')}
           onClose={() => setIsAddStudentModalOpen(false)}
           onAddStudent={handleAddStudent}
         />
@@ -742,6 +990,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
         <EditStudentModal
           isOpen={Boolean(studentToEdit)}
           student={studentToEdit}
+          availableBatches={dynamicCohortBatches.filter(b => b !== 'All')}
           onClose={() => setStudentToEdit(null)}
           onSave={handleSaveStudent}
         />
