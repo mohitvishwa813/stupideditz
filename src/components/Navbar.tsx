@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { UserProfile } from '../types';
 import { 
   Film, 
@@ -23,7 +24,7 @@ import {
 import { soundFx } from '../utils/soundEffects';
 
 interface NavbarProps {
-  currentView: 'home' | 'student-portal' | 'admin-console' | 'assets' | 'breakdowns';
+  currentView?: 'home' | 'student-portal' | 'admin-console' | 'assets' | 'breakdowns';
   studentActiveTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test';
   onNavigate: (view: 'home' | 'student-portal' | 'admin-console' | 'assets' | 'breakdowns', studentTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test') => void;
   currentUser: UserProfile | null;
@@ -33,16 +34,26 @@ interface NavbarProps {
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
-  currentView,
+  currentView: currentViewProp,
   onNavigate,
   currentUser,
   onOpenLogin,
   onLogout,
   onOpenEnroll
 }) => {
+  const location = useLocation();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  const getActiveView = () => {
+    if (location.pathname === '/breakdowns') return 'breakdowns';
+    if (location.pathname === '/assets') return 'assets';
+    if (location.pathname === '/student-portal') return 'student-portal';
+    if (location.pathname === '/admin-console') return 'admin-console';
+    return 'home';
+  };
+  const currentView = currentViewProp || getActiveView();
 
   // Close profile dropdown when clicking outside
   useEffect(() => {

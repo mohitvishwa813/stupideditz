@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course } from './types';
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER, GUEST_USER } from './services/storageService';
 import { DbService } from './services/dbService';
@@ -21,7 +22,7 @@ import { EnrollModal } from './components/modals/EnrollModal';
 import { soundFx } from './utils/soundEffects';
 
 export default function App() {
-  const [currentView, setCurrentView] = useState<'home' | 'student-portal' | 'admin-console' | 'assets' | 'breakdowns'>('home');
+  const navigate = useNavigate();
   const [studentPortalTab, setStudentPortalTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test'>('enrolled-courses');
   
   const [sessions, setSessions] = useState<CourseSession[]>(() => StorageService.getSessions());
@@ -82,7 +83,8 @@ export default function App() {
     if (studentTab) {
       setStudentPortalTab(studentTab);
     }
-    setCurrentView(view);
+    const path = view === 'home' ? '/' : `/${view}`;
+    navigate(path);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -97,10 +99,10 @@ export default function App() {
   ) => {
     setCurrentUser(user);
     if (redirectView === 'admin-console' || user.role === 'admin') {
-      setCurrentView('admin-console');
+      navigate('/admin-console');
     } else {
       setStudentPortalTab('enrolled-courses');
-      setCurrentView('student-portal');
+      navigate('/student-portal');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -109,7 +111,7 @@ export default function App() {
     soundFx.playPop();
     StorageService.setCurrentUser(null);
     setCurrentUser(null);
-    setCurrentView('home');
+    navigate('/');
   };
 
   const handleOpenEnrollModal = (courseId?: string) => {
@@ -121,7 +123,7 @@ export default function App() {
     const updatedUser = StorageService.enrollUserInCourse(enrollCourseId, batch);
     setCurrentUser(updatedUser);
     setStudentPortalTab('enrolled-courses');
-    setCurrentView('student-portal');
+    navigate('/student-portal');
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
@@ -129,7 +131,6 @@ export default function App() {
     <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
       {/* Top Studio Navigation */}
       <Navbar
-        currentView={currentView}
         studentActiveTab={studentPortalTab}
         onNavigate={handleNavigate}
         currentUser={currentUser}
@@ -140,101 +141,97 @@ export default function App() {
 
       {/* Main View Router */}
       <main className="flex-1">
-        {/* DASHBOARD PAGE (Default Landing View) */}
-        {currentView === 'home' && (
-          <>
-            <HeroSection
-              sessionsCount={sessions.length}
-              onExploreCurriculum={() => {
-                const elem = document.getElementById('courses-section');
-                if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-              }}
-              onExploreAssets={() => {
-                const elem = document.getElementById('asset-vault-section');
-                if (elem) elem.scrollIntoView({ behavior: 'smooth' });
-              }}
-              onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
-              onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId || 'course-davinci-26')}
-              currentUser={currentUser}
-            />
+        <Routes>
+          {/* DASHBOARD PAGE (Default Landing View) */}
+          <Route path="/" element={
+            <>
+              <HeroSection
+                sessionsCount={sessions.length}
+                onExploreCurriculum={() => {
+                  const elem = document.getElementById('courses-section');
+                  if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                }}
+                onExploreAssets={() => {
+                  const elem = document.getElementById('asset-vault-section');
+                  if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                }}
+                onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
+                onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId || 'course-davinci-26')}
+                currentUser={currentUser}
+              />
 
-            {/* Courses Masterclass Catalog */}
-            <CoursesSection
-              courses={courses}
-              onSelectCourse={(course) => handleOpenEnrollModal(course.id)}
-              onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId)}
-              onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
-              currentUser={currentUser}
-            />
+              {/* Courses Masterclass Catalog */}
+              <CoursesSection
+                courses={courses}
+                onSelectCourse={(course) => handleOpenEnrollModal(course.id)}
+                onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId)}
+                onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
+                currentUser={currentUser}
+              />
 
-            {/* 26-Day Live Schedule & Syllabus - Hidden from landing page (code preserved) */}
-            {/* 
-            <CurriculumOverview
-              sessions={sessions}
-              onOpenPortal={() => handleNavigate('student-portal', 'classroom')}
-              onOpenEnroll={() => handleOpenEnrollModal('course-davinci-26')}
-            /> 
-            */}
+              {/* Free Sample & Creator Asset Vault */}
+              <div id="asset-vault-section">
+                <AssetVaultSection
+                  assets={assets}
+                  currentUser={currentUser}
+                  onOpenLoginModal={() => setIsLoginModalOpen(true)}
+                />
+              </div>
 
-            {/* Free Sample & Creator Asset Vault */}
-            <div id="asset-vault-section">
+              {/* YouTube & Documentary Breakdown Deconstructions */}
+              <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
+            </>
+          } />
+
+          {/* STANDALONE ASSET VAULT VIEW */}
+          <Route path="/assets" element={
+            <div className="pt-6">
               <AssetVaultSection
                 assets={assets}
                 currentUser={currentUser}
                 onOpenLoginModal={() => setIsLoginModalOpen(true)}
               />
             </div>
+          } />
 
-            {/* YouTube & Documentary Breakdown Deconstructions */}
-            <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
-          </>
-        )}
+          {/* STANDALONE VIDEO BREAKDOWNS VIEW */}
+          <Route path="/breakdowns" element={
+            <div className="pt-6">
+              <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
+            </div>
+          } />
 
-        {/* STANDALONE ASSET VAULT VIEW */}
-        {currentView === 'assets' && (
-          <div className="pt-6">
-            <AssetVaultSection
-              assets={assets}
-              currentUser={currentUser}
-              onOpenLoginModal={() => setIsLoginModalOpen(true)}
+          {/* STUDENT LEARNING HUB & ENROLLED COURSES VIEW */}
+          <Route path="/student-portal" element={
+            <StudentPortal
+              sessions={sessions}
+              currentUser={currentUser || DEFAULT_STUDENT_USER}
+              initialTab={studentPortalTab}
+              onLogout={handleLogout}
+              onNavigateToAdmin={() => handleNavigate('admin-console')}
+              onNavigateHome={() => handleNavigate('home')}
+              onOpenEnroll={handleOpenEnrollModal}
             />
-          </div>
-        )}
+          } />
 
-        {/* STANDALONE VIDEO BREAKDOWNS VIEW */}
-        {currentView === 'breakdowns' && (
-          <div className="pt-6">
-            <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
-          </div>
-        )}
+          {/* ADMIN STUDIO CONSOLE */}
+          <Route path="/admin-console" element={
+            <AdminConsole
+              sessions={sessions}
+              onUpdateSessions={handleUpdateSessions}
+              currentUser={currentUser || DEFAULT_ADMIN_USER}
+              onNavigateToStudentPortal={() => handleNavigate('student-portal', 'enrolled-courses')}
+              onLogout={handleLogout}
+              assets={assets}
+              onUpdateAssets={handleUpdateAssets}
+              courses={courses}
+              onUpdateCourses={handleUpdateCourses}
+            />
+          } />
 
-        {/* STUDENT LEARNING HUB & ENROLLED COURSES VIEW */}
-        {currentView === 'student-portal' && (
-          <StudentPortal
-            sessions={sessions}
-            currentUser={currentUser || DEFAULT_STUDENT_USER}
-            initialTab={studentPortalTab}
-            onLogout={handleLogout}
-            onNavigateToAdmin={() => handleNavigate('admin-console')}
-            onNavigateHome={() => handleNavigate('home')}
-            onOpenEnroll={handleOpenEnrollModal}
-          />
-        )}
-
-        {/* ADMIN STUDIO CONSOLE (Protected & accessible when authenticated as Admin) */}
-        {currentView === 'admin-console' && (
-          <AdminConsole
-            sessions={sessions}
-            onUpdateSessions={handleUpdateSessions}
-            currentUser={currentUser || DEFAULT_ADMIN_USER}
-            onNavigateToStudentPortal={() => handleNavigate('student-portal', 'enrolled-courses')}
-            onLogout={handleLogout}
-            assets={assets}
-            onUpdateAssets={handleUpdateAssets}
-            courses={courses}
-            onUpdateCourses={handleUpdateCourses}
-          />
-        )}
+          {/* Catch-all Fallback Redirect */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Routes>
       </main>
 
       {/* Global Footer */}
