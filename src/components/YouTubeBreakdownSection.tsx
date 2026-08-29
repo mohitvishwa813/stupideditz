@@ -1,17 +1,21 @@
 import React, { useState } from 'react';
-import { YouTubeBreakdown, VideoAsset } from '../types';
+import { YouTubeBreakdown, VideoAsset, UserProfile } from '../types';
 import { Play, Tv, Clock, Eye, Sparkles, DownloadCloud, Volume2, ArrowUpRight, Bookmark } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
 
 interface YouTubeBreakdownSectionProps {
   breakdowns: YouTubeBreakdown[];
   assets: VideoAsset[];
+  currentUser?: UserProfile | null;
+  onOpenLoginModal?: () => void;
   onOpenVideoModal?: (breakdown: YouTubeBreakdown) => void;
 }
 
 export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = ({
   breakdowns,
   assets,
+  currentUser,
+  onOpenLoginModal,
 }) => {
   const [selectedBreakdown, setSelectedBreakdown] = useState<YouTubeBreakdown>(breakdowns[0] || {} as YouTubeBreakdown);
   const [activeMarker, setActiveMarker] = useState<number | null>(0);
@@ -188,14 +192,24 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
                             <Volume2 className="w-3.5 h-3.5" />
                           </button>
                         )}
-                        <a
-                          href={asset.downloadUrl}
-                          target="_blank"
-                          rel="noreferrer"
+                        <button
+                          onClick={() => {
+                            if (!currentUser) {
+                              soundFx.playGlitch();
+                              if (onOpenLoginModal) {
+                                onOpenLoginModal();
+                              }
+                              return;
+                            }
+                            soundFx.playPop();
+                            if (asset.downloadUrl) {
+                              window.open(asset.downloadUrl, '_blank');
+                            }
+                          }}
                           className="px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-500 text-white font-semibold text-[11px] transition-colors"
                         >
                           Download
-                        </a>
+                        </button>
                       </div>
                     </div>
                   );

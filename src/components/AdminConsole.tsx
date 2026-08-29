@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course } from '../types';
+import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption } from '../types';
 import { StorageService } from '../services/storageService';
 import { DbService } from '../services/dbService';
+import { INITIAL_HERO_OPTIONS } from '../data/initialData';
 import { 
   Plus, 
   Edit3, 
@@ -32,7 +33,9 @@ import {
   BellRing,
   AlertCircle,
   GraduationCap,
-  BookOpen
+  BookOpen,
+  Tv,
+  Save
 } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
 import { AddEditSessionModal } from './modals/AddEditSessionModal';
@@ -52,6 +55,8 @@ interface AdminConsoleProps {
   onUpdateAssets: (assets: VideoAsset[]) => void;
   courses: Course[];
   onUpdateCourses: (courses: Course[]) => void;
+  heroOptions?: HeroShowcaseOption[];
+  onUpdateHeroOptions?: (options: HeroShowcaseOption[]) => void;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
@@ -64,8 +69,13 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateAssets,
   courses,
   onUpdateCourses,
+  heroOptions,
+  onUpdateHeroOptions,
 }) => {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'submissions' | 'students' | 'assets' | 'courses' | 'broadcast'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'hero'>('schedule');
+  const [heroOptionsList, setHeroOptionsList] = useState<HeroShowcaseOption[]>(
+    heroOptions && heroOptions.length >= 3 ? heroOptions : INITIAL_HERO_OPTIONS
+  );
   const [selectedBatchFilter, setSelectedBatchFilter] = useState<'All' | 'September' | 'October'>('All');
   const [studentBatchFilter, setStudentBatchFilter] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
@@ -158,17 +168,30 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   };
 
   // Asset CRUD
-  const handleSaveAsset = (updatedAsset: VideoAsset) => {
-    const updatedList = assets.map(a => a.id === updatedAsset.id ? updatedAsset : a);
-    onUpdateAssets(updatedList);
+  const handleSaveAsset = async (updatedAsset: VideoAsset) => {
+    await DbService.saveAssetToDb(updatedAsset);
+    const freshAssets = await DbService.getAssets();
+    onUpdateAssets(freshAssets);
   };
 
-  const handleDeleteAsset = (id: string) => {
+  const handleDeleteAsset = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this asset from the library?')) {
       soundFx.playPop();
-      const updatedList = assets.filter(a => a.id !== id);
-      onUpdateAssets(updatedList);
+      await DbService.deleteAssetFromDb(id);
+      const freshAssets = await DbService.getAssets();
+      onUpdateAssets(freshAssets);
     }
+  };
+
+  const handleSaveHeroOptions = async () => {
+    soundFx.playPop();
+    for (let i = 0; i < heroOptionsList.length; i++) {
+      await DbService.saveHeroOptionToDb(heroOptionsList[i], i + 1);
+    }
+    const fresh = await DbService.getHeroOptions();
+    setHeroOptionsList(fresh);
+    if (onUpdateHeroOptions) onUpdateHeroOptions(fresh);
+    confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
   };
 
   const [selectedBatchForNewSession, setSelectedBatchForNewSession] = useState<string>('');
@@ -376,10 +399,9 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             {[
               { id: 'schedule', label: 'Class Curriculum Studio', icon: Calendar },
               { id: 'courses', label: 'Masterclass Course Cards', icon: BookOpen },
-              { id: 'submissions', label: 'Homework Grading Station', icon: Award },
               { id: 'students', label: 'Student Directory & CRM', icon: Users },
               { id: 'assets', label: 'Asset Vault Catalog', icon: FolderOpen },
-              { id: 'broadcast', label: 'Cohort Broadcaster', icon: BellRing },
+              { id: 'hero', label: 'Hero Showcase Options', icon: Tv },
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -498,68 +520,6 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                   </div>
                 </div>
               ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 2: SUBMISSIONS GRADING */}
-        {activeTab === 'submissions' && (
-          <div className="mt-6 space-y-6">
-            <div className="bg-[#111422] p-6 rounded-2xl border border-slate-800 space-y-4">
-              <h3 className="text-lg font-bold text-white">
-                Student Project Review & Grading Desk
-              </h3>
-              <p className="text-xs text-slate-400">
-                Click project Drive links, review render timelines, and assign grades with feedback.
-              </p>
-
-              <div className="space-y-3 pt-2">
-                {submissions.map(sub => (
-                  <div key={sub.id} className="p-4 rounded-xl bg-[#151928] border border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="font-semibold text-sm text-white">{sub.studentName}</span>
-                        <span className="text-xs text-slate-400 font-mono">({sub.studentEmail})</span>
-                        <span className={`px-2 py-0.2 rounded text-[10px] font-bold uppercase ${
-                          sub.status === 'Reviewed' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-amber-500/20 text-amber-400'
-                        }`}>
-                          {sub.status}
-                        </span>
-                      </div>
-                      <p className="text-xs text-slate-300">
-                        <strong>Student Notes:</strong> {sub.notes}
-                      </p>
-                      <a
-                        href={sub.driveLink}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="inline-flex items-center gap-1 text-xs text-emerald-400 hover:underline pt-1"
-                      >
-                        <ExternalLink className="w-3.5 h-3.5" />
-                        <span>Open Rendered Project File ({sub.driveLink})</span>
-                      </a>
-                    </div>
-
-                    {/* Grade Selector */}
-                    <div className="flex items-center gap-2 shrink-0">
-                      <span className="text-xs font-semibold text-slate-400">Award Grade:</span>
-                      {['A+', 'A', 'B'].map(grade => (
-                        <button
-                          key={grade}
-                          onClick={() => handleGradeSubmission(sub.id, grade)}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all ${
-                            sub.grade === grade
-                              ? 'bg-emerald-500 text-slate-950 shadow-xs'
-                              : 'bg-slate-800 text-slate-300 hover:text-white'
-                          }`}
-                        >
-                          {grade}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         )}
@@ -911,40 +871,154 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           </div>
         )}
 
-        {/* TAB 5: BROADCASTER */}
-        {activeTab === 'broadcast' && (
+        {/* TAB: HERO SHOWCASE MANAGER */}
+        {activeTab === 'hero' && (
           <div className="mt-6 space-y-6">
-            <div className="bg-[#111422] p-6 rounded-2xl border border-slate-800 space-y-4">
-              <h3 className="text-lg font-bold text-white">
-                Broadcast Urgent Cohort Notification
-              </h3>
-              <p className="text-xs text-slate-400">
-                Pushes a banner notice across all enrolled student learning dashboards.
-              </p>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl bg-[#141726] border border-slate-800">
+              <div>
+                <h3 className="text-base font-bold text-white flex items-center gap-2">
+                  <Tv className="w-5 h-5 text-blue-400" />
+                  Hero Interactive Timeline Showcase (3 Options)
+                </h3>
+                <p className="text-xs text-slate-400 mt-1">
+                  Directly edit the 3 interactive options shown on the Hero landing page video player (Titles, Cover Image URLs, and Track Labels).
+                </p>
+              </div>
+              <button
+                onClick={handleSaveHeroOptions}
+                className="px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-lg transition-all flex items-center gap-2 shrink-0"
+              >
+                <Save className="w-4 h-4" />
+                <span>Save All 3 Options to DB</span>
+              </button>
+            </div>
 
-              <form onSubmit={handleSendBroadcast} className="space-y-4">
-                <textarea
-                  value={broadcastMessage}
-                  onChange={e => setBroadcastMessage(e.target.value)}
-                  rows={4}
-                  className="w-full bg-[#151928] border border-slate-700/80 rounded-xl p-4 text-xs text-white focus:outline-none focus:border-blue-500"
-                />
-
-                <div className="flex items-center justify-between">
-                  {broadcastSentToast && (
-                    <span className="text-xs font-semibold text-emerald-400 font-mono">
-                      ✓ Broadcast published to student portals!
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {heroOptionsList.map((opt, idx) => (
+                <div key={opt.id} className="p-5 rounded-2xl bg-[#111422] border border-slate-800 space-y-4 shadow-lg">
+                  <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+                    <span className="text-xs font-bold font-mono text-blue-400 uppercase">
+                      OPTION 0{idx + 1}
                     </span>
-                  )}
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-500 text-white text-xs font-semibold flex items-center gap-2 shadow-xs ml-auto"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Send Announcement</span>
-                  </button>
+                    <span className="text-[10px] text-slate-500 font-mono">{opt.id}</span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1 font-mono">
+                      Tab Button Label
+                    </label>
+                    <input
+                      type="text"
+                      value={opt.tabName}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], tabName: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1 font-mono">
+                      Lesson / Video Title
+                    </label>
+                    <input
+                      type="text"
+                      value={opt.title}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], title: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1 font-mono">
+                      Preview Image URL
+                    </label>
+                    <input
+                      type="url"
+                      value={opt.imageUrl}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], imageUrl: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-2 text-[11px] text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                    {opt.imageUrl && (
+                      <img src={opt.imageUrl} alt={opt.tabName} className="mt-2 w-full h-24 object-cover rounded-lg border border-slate-800" />
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-semibold text-slate-300 uppercase mb-1 font-mono">
+                      Badge Specs Overlay
+                    </label>
+                    <input
+                      type="text"
+                      value={opt.badgeText}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], badgeText: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
+
+                  <div className="space-y-2 border-t border-slate-800/80 pt-3">
+                    <span className="text-[11px] font-semibold text-slate-400 uppercase font-mono block">Track / Node Labels</span>
+                    <input
+                      type="text"
+                      placeholder="Track 1"
+                      value={opt.label1}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], label1: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Track 2"
+                      value={opt.label2}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], label2: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Track 3"
+                      value={opt.label3}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], label3: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                    <input
+                      type="text"
+                      placeholder="Track 4"
+                      value={opt.label4 || ''}
+                      onChange={e => {
+                        const updated = [...heroOptionsList];
+                        updated[idx] = { ...updated[idx], label4: e.target.value };
+                        setHeroOptionsList(updated);
+                      }}
+                      className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3 py-1.5 text-[11px] text-white focus:outline-none focus:border-blue-500 font-mono"
+                    />
+                  </div>
                 </div>
-              </form>
+              ))}
             </div>
           </div>
         )}

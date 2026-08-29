@@ -163,3 +163,15 @@ export interface UserProfile {
   enrolledBatch: string;
   enrolledCourses: EnrolledCourseInfo[];
 }
+
+export interface HeroShowcaseOption {
+  id: string;
+  tabName: string;
+  title: string;
+  imageUrl: string;
+  badgeText: string;
+  label1: string;
+  label2: string;
+  label3: string;
+  label4?: string;
+}

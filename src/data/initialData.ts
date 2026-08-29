@@ -1,4 +1,4 @@
-import { CourseSession, VideoAsset, YouTubeBreakdown, RegisteredStudent, MockTestQuestion } from '../types';
+import { CourseSession, VideoAsset, YouTubeBreakdown, RegisteredStudent, MockTestQuestion, HeroShowcaseOption } from '../types';
 
 export const INITIAL_SESSIONS: CourseSession[] = [
   // Week 1 (15 Sep – 21 Sep)
@@ -1265,5 +1265,41 @@ export const MOCK_TEST_QUESTIONS: MockTestQuestion[] = [
     correctAnswer: 1,
     explanation: 'YouTube automatically normalizes dialogue and audio to around -14 LUFS integrated loudness.',
     pageContext: 'Fairlight'
+  }
+];
+
+export const INITIAL_HERO_OPTIONS: HeroShowcaseOption[] = [
+  {
+    id: 'hero-opt-1',
+    tabName: 'Cut & Edit Page',
+    title: 'Zem TV Fast-Paced Cut Technique • Day 04 Lesson',
+    imageUrl: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80',
+    badgeText: 'REC 709 • 00:04:18:12 • 4K DCI',
+    label1: 'V2: Title_Callout.drfx',
+    label2: 'V1: 4K_A-Roll_Interview.mov',
+    label3: 'A1: Voice_Isolate',
+    label4: 'A2: Cinema_Whoosh_01.wav'
+  },
+  {
+    id: 'hero-opt-2',
+    tabName: 'Color Nodes & LUTs',
+    title: 'Hollywood Node Color Grading & LUT Presets • Day 07 Lesson',
+    imageUrl: 'https://images.unsplash.com/photo-1536240478700-b869070f9279?auto=format&fit=crop&w=1200&q=80',
+    badgeText: 'NODE GRAPH • TEAL & ORANGE 3D CUBE',
+    label1: 'NODE 01: Noise Reduction (Temporal 3-frame)',
+    label2: 'NODE 02: Primary Exposure (Lift/Gamma/Gain)',
+    label3: 'NODE 03: Teal & Orange LUT (3D Cube Matrix)',
+    label4: 'NODE 04: 35mm Film Grain (4K Grain Overlay)'
+  },
+  {
+    id: 'hero-opt-3',
+    tabName: 'Fairlight Audio SFX',
+    title: 'Fairlight Sound Design & Audio Foley FX • Day 15 Lesson',
+    imageUrl: 'https://images.unsplash.com/photo-1598488035139-bdbb2231ce04?auto=format&fit=crop&w=1200&q=80',
+    badgeText: 'FAIRLIGHT BUS • 24-BIT 48KHZ WAV',
+    label1: 'Cinematic Whoosh (24-bit WAV)',
+    label2: 'Sub-Bass Impact (24-bit WAV)',
+    label3: 'Glitch Transition (24-bit WAV)',
+    label4: 'UI Pop Click (24-bit WAV)'
   }
 ];

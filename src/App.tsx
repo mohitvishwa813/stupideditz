@@ -5,7 +5,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course } from './types';
+import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption } from './types';
+import { INITIAL_HERO_OPTIONS } from './data/initialData';
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER, GUEST_USER } from './services/storageService';
 import { DbService } from './services/dbService';
 import { Navbar } from './components/Navbar';
@@ -29,6 +30,7 @@ export default function App() {
   const [assets, setAssets] = useState<VideoAsset[]>(() => StorageService.getAssets());
   const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>(() => StorageService.getYouTubeBreakdowns());
   const [courses, setCourses] = useState<Course[]>(() => StorageService.getCourses());
+  const [heroOptions, setHeroOptions] = useState<HeroShowcaseOption[]>(INITIAL_HERO_OPTIONS);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getCurrentUser());
   
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -41,16 +43,20 @@ export default function App() {
     let isMounted = true;
     async function loadTursoData() {
       try {
-        const [dbSessions, dbBreakdowns, dbCourses, dbStudents] = await Promise.all([
+        const [dbSessions, dbBreakdowns, dbCourses, dbStudents, dbAssets, dbHeroOptions] = await Promise.all([
           DbService.getSessions(),
           DbService.getYouTubeBreakdowns(),
           DbService.getCourses(),
-          DbService.getStudents()
+          DbService.getStudents(),
+          DbService.getAssets(),
+          DbService.getHeroOptions()
         ]);
         if (isMounted) {
           if (dbSessions && dbSessions.length > 0) setSessions(dbSessions);
           if (dbBreakdowns && dbBreakdowns.length > 0) setYoutubeBreakdowns(dbBreakdowns);
           if (dbCourses && dbCourses.length > 0) setCourses(dbCourses);
+          if (dbAssets && dbAssets.length > 0) setAssets(dbAssets);
+          if (dbHeroOptions && dbHeroOptions.length > 0) setHeroOptions(dbHeroOptions);
         }
       } catch (err) {
         console.warn('Failed loading data from Turso, using local defaults:', err);
@@ -147,6 +153,7 @@ export default function App() {
             <>
               <HeroSection
                 sessionsCount={sessions.length}
+                heroOptions={heroOptions}
                 onExploreCurriculum={() => {
                   const elem = document.getElementById('courses-section');
                   if (elem) elem.scrollIntoView({ behavior: 'smooth' });
@@ -179,7 +186,12 @@ export default function App() {
               </div>
 
               {/* YouTube & Documentary Breakdown Deconstructions */}
-              <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
+              <YouTubeBreakdownSection
+                breakdowns={youtubeBreakdowns}
+                assets={assets}
+                currentUser={currentUser}
+                onOpenLoginModal={() => setIsLoginModalOpen(true)}
+              />
             </>
           } />
 
@@ -197,7 +209,12 @@ export default function App() {
           {/* STANDALONE VIDEO BREAKDOWNS VIEW */}
           <Route path="/breakdowns" element={
             <div className="pt-6">
-              <YouTubeBreakdownSection breakdowns={youtubeBreakdowns} assets={assets} />
+              <YouTubeBreakdownSection
+                breakdowns={youtubeBreakdowns}
+                assets={assets}
+                currentUser={currentUser}
+                onOpenLoginModal={() => setIsLoginModalOpen(true)}
+              />
             </div>
           } />
 
@@ -226,6 +243,8 @@ export default function App() {
               onUpdateAssets={handleUpdateAssets}
               courses={courses}
               onUpdateCourses={handleUpdateCourses}
+              heroOptions={heroOptions}
+              onUpdateHeroOptions={(newHeroOptions) => setHeroOptions(newHeroOptions)}
             />
           } />
 

@@ -8,9 +8,10 @@ import {
   UserProfile,
   Course,
   EnrolledCourseInfo,
-  SessionType
+  SessionType,
+  HeroShowcaseOption
 } from '../types';
-import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS } from '../data/initialData';
+import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS, INITIAL_HERO_OPTIONS } from '../data/initialData';
 import { COURSES_CATALOG, DEFAULT_ENROLLED_COURSES } from '../data/coursesData';
 import { DEFAULT_ADMIN_USER, DEFAULT_STUDENT_USER } from './storageService';
 
@@ -462,6 +463,216 @@ export class DbService {
       return true;
     } catch (err) {
       console.error('Failed deleting student from Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Ensure Video Assets table exists
+  static async initAssetTable() {
+    try {
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS video_assets (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          category TEXT NOT NULL,
+          price REAL DEFAULT 0,
+          is_free_sample INTEGER DEFAULT 0,
+          file_size TEXT,
+          format TEXT,
+          download_url TEXT,
+          audio_sample_type TEXT,
+          thumbnail_url TEXT,
+          description TEXT,
+          downloads_count INTEGER DEFAULT 0,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+    } catch (e) {
+      console.warn('Turso asset table init note:', e);
+    }
+  }
+
+  // Fetch Video Assets Catalog from Turso DB
+  static async getAssets(): Promise<VideoAsset[]> {
+    try {
+      await this.initAssetTable();
+      let res = await turso.execute('SELECT * FROM video_assets ORDER BY created_at ASC');
+
+      // Auto-seed Turso DB if table is empty
+      if (res.rows.length === 0) {
+        console.log('⚡ [Turso DB] Empty video_assets table. Seeding initial catalog to Turso DB...');
+        for (const asset of INITIAL_ASSETS) {
+          await this.saveAssetToDb(asset);
+        }
+        res = await turso.execute('SELECT * FROM video_assets ORDER BY created_at ASC');
+      }
+
+      return res.rows.map((r: any) => ({
+        id: String(r.id),
+        title: String(r.title),
+        category: String(r.category || 'SFX') as any,
+        price: Number(r.price || 0),
+        isFreeSample: Boolean(r.is_free_sample),
+        fileSize: String(r.file_size || '100 MB'),
+        format: String(r.format || 'WAV / ZIP'),
+        downloadUrl: String(r.download_url || ''),
+        audioSampleType: r.audio_sample_type ? String(r.audio_sample_type) as any : undefined,
+        thumbnail: String(r.thumbnail_url || 'https://images.unsplash.com/photo-1511671782779-c97d3d27a1d4?auto=format&fit=crop&w=600&q=80'),
+        description: String(r.description || ''),
+        tags: [String(r.category || 'SFX'), 'Studio Pack'],
+        downloadsCount: Number(r.downloads_count || 100)
+      }));
+    } catch (err) {
+      console.warn('Failed loading video assets from Turso DB:', err);
+      return INITIAL_ASSETS;
+    }
+  }
+
+  // Save / Update Asset in Turso Cloud Database
+  static async saveAssetToDb(asset: VideoAsset): Promise<boolean> {
+    try {
+      await this.initAssetTable();
+      await turso.execute({
+        sql: `INSERT INTO video_assets (
+          id, title, category, price, is_free_sample, file_size, format, download_url, audio_sample_type, thumbnail_url, description, downloads_count
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          title = excluded.title,
+          category = excluded.category,
+          price = excluded.price,
+          is_free_sample = excluded.is_free_sample,
+          file_size = excluded.file_size,
+          format = excluded.format,
+          download_url = excluded.download_url,
+          audio_sample_type = excluded.audio_sample_type,
+          thumbnail_url = excluded.thumbnail_url,
+          description = excluded.description,
+          downloads_count = excluded.downloads_count`,
+        args: [
+          asset.id,
+          asset.title,
+          asset.category,
+          asset.price || 0,
+          asset.isFreeSample ? 1 : 0,
+          asset.fileSize || '',
+          asset.format || '',
+          asset.downloadUrl || '',
+          asset.audioSampleType || null,
+          asset.thumbnail || '',
+          asset.description || '',
+          asset.downloadsCount || 0
+        ]
+      });
+      console.log(`⚡ [Turso DB] Saved asset "${asset.title}" (Thumbnail: ${asset.thumbnail}) to Turso Cloud DB!`);
+      return true;
+    } catch (err) {
+      console.error('Failed saving video asset to Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Delete Video Asset from Turso Cloud Database
+  static async deleteAssetFromDb(assetId: string): Promise<boolean> {
+    try {
+      await turso.execute({
+        sql: `DELETE FROM video_assets WHERE id = ?`,
+        args: [assetId]
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed deleting video asset from Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Ensure Hero Showcase Table exists
+  static async initHeroTable() {
+    try {
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS hero_showcase (
+          id TEXT PRIMARY KEY,
+          tab_name TEXT NOT NULL,
+          title TEXT NOT NULL,
+          image_url TEXT NOT NULL,
+          badge_text TEXT,
+          label_1 TEXT,
+          label_2 TEXT,
+          label_3 TEXT,
+          label_4 TEXT,
+          display_order INTEGER DEFAULT 1
+        )
+      `);
+    } catch (e) {
+      console.warn('Turso hero table init note:', e);
+    }
+  }
+
+  // Fetch Hero Showcase Options from Turso DB
+  static async getHeroOptions(): Promise<HeroShowcaseOption[]> {
+    try {
+      await this.initHeroTable();
+      let res = await turso.execute('SELECT * FROM hero_showcase ORDER BY display_order ASC');
+
+      if (res.rows.length === 0) {
+        console.log('⚡ [Turso DB] Empty hero_showcase table. Seeding default options to Turso DB...');
+        for (let i = 0; i < INITIAL_HERO_OPTIONS.length; i++) {
+          await this.saveHeroOptionToDb(INITIAL_HERO_OPTIONS[i], i + 1);
+        }
+        res = await turso.execute('SELECT * FROM hero_showcase ORDER BY display_order ASC');
+      }
+
+      return res.rows.map((r: any) => ({
+        id: String(r.id),
+        tabName: String(r.tab_name || 'Option'),
+        title: String(r.title || ''),
+        imageUrl: String(r.image_url || ''),
+        badgeText: String(r.badge_text || ''),
+        label1: String(r.label_1 || ''),
+        label2: String(r.label_2 || ''),
+        label3: String(r.label_3 || ''),
+        label4: r.label_4 ? String(r.label_4) : undefined
+      }));
+    } catch (err) {
+      console.warn('Failed loading hero options from Turso DB:', err);
+      return INITIAL_HERO_OPTIONS;
+    }
+  }
+
+  // Save / Update Hero Showcase Option in Turso DB
+  static async saveHeroOptionToDb(option: HeroShowcaseOption, orderIndex: number = 1): Promise<boolean> {
+    try {
+      await this.initHeroTable();
+      await turso.execute({
+        sql: `INSERT INTO hero_showcase (
+          id, tab_name, title, image_url, badge_text, label_1, label_2, label_3, label_4, display_order
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ON CONFLICT(id) DO UPDATE SET
+          tab_name = excluded.tab_name,
+          title = excluded.title,
+          image_url = excluded.image_url,
+          badge_text = excluded.badge_text,
+          label_1 = excluded.label_1,
+          label_2 = excluded.label_2,
+          label_3 = excluded.label_3,
+          label_4 = excluded.label_4,
+          display_order = excluded.display_order`,
+        args: [
+          option.id,
+          option.tabName,
+          option.title,
+          option.imageUrl,
+          option.badgeText || '',
+          option.label1 || '',
+          option.label2 || '',
+          option.label3 || '',
+          option.label4 || '',
+          orderIndex
+        ]
+      });
+      console.log(`⚡ [Turso DB] Saved Hero Option "${option.tabName}" to Turso DB!`);
+      return true;
+    } catch (err) {
+      console.error('Failed saving Hero Option to Turso DB:', err);
       return false;
     }
   }

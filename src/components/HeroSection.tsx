@@ -21,7 +21,8 @@ import {
   Calendar,
   Check
 } from 'lucide-react';
-import { UserProfile, Course } from '../types';
+import { UserProfile, Course, HeroShowcaseOption } from '../types';
+import { INITIAL_HERO_OPTIONS } from '../data/initialData';
 import { soundFx } from '../utils/soundEffects';
 
 interface HeroSectionProps {
@@ -31,6 +32,7 @@ interface HeroSectionProps {
   onOpenEnroll: (courseId?: string) => void;
   currentUser: UserProfile | null;
   sessionsCount?: number;
+  heroOptions?: HeroShowcaseOption[];
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -39,17 +41,23 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenStudentPortal,
   onOpenEnroll,
   currentUser,
-  sessionsCount
+  sessionsCount,
+  heroOptions
 }) => {
   // Compute total cohort days dynamically from database sessions list
   const totalDaysCount = sessionsCount && sessionsCount > 0 ? sessionsCount : 26;
 
+  // Hero Showcase Options derived from DB or default
+  const options = heroOptions && heroOptions.length >= 3 ? heroOptions : INITIAL_HERO_OPTIONS;
+
   // Interactive DaVinci Studio Workbench State (Clean desktop view, no phone frames)
   const [selectedLut, setSelectedLut] = useState<'raw' | 'teal-orange' | 'kodak' | 'cyberpunk'>('teal-orange');
-  const [activeTab, setActiveTab] = useState<'timeline' | 'nodes' | 'fairlight'>('timeline');
+  const [activeTabIdx, setActiveTabIdx] = useState<number>(0);
   const [playbackSpeed, setPlaybackSpeed] = useState<number>(1);
   const [isPlaying, setIsPlaying] = useState(true);
   const [scrubberPos, setScrubberPos] = useState(38); // percentage
+
+  const currentOpt = options[activeTabIdx] || options[0];
 
   const isEnrolled = currentUser?.isEnrolled && (currentUser.enrolledCourses?.length || 0) > 0;
 
@@ -195,216 +203,96 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
 
             {/* Workbench Mode Tabs */}
-            <div className="flex items-center gap-1 bg-[#0b0e18] p-1 rounded-xl border border-slate-800 text-xs">
-              <button
-                onClick={() => {
-                  soundFx.playClick();
-                  setActiveTab('timeline');
-                }}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                  activeTab === 'timeline'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                id="hero-tab-timeline"
-              >
-                Cut & Edit Page
-              </button>
-              <button
-                onClick={() => {
-                  soundFx.playClick();
-                  setActiveTab('nodes');
-                }}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                  activeTab === 'nodes'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                id="hero-tab-nodes"
-              >
-                Color Nodes & LUTs
-              </button>
-              <button
-                onClick={() => {
-                  soundFx.playClick();
-                  setActiveTab('fairlight');
-                }}
-                className={`px-3 py-1 rounded-lg font-semibold transition-all ${
-                  activeTab === 'fairlight'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-400 hover:text-white'
-                }`}
-                id="hero-tab-fairlight"
-              >
-                Fairlight Audio SFX
-              </button>
+            <div className="flex items-center gap-1 bg-[#0b0e18] p-1 rounded-xl border border-slate-800 text-xs overflow-x-auto">
+              {options.map((opt, idx) => (
+                <button
+                  key={opt.id}
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTabIdx(idx);
+                  }}
+                  className={`px-3 py-1 rounded-lg font-semibold transition-all whitespace-nowrap ${
+                    activeTabIdx === idx
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-400 hover:text-white'
+                  }`}
+                  id={`hero-tab-${opt.id}`}
+                >
+                  {opt.tabName}
+                </button>
+              ))}
             </div>
           </div>
 
           {/* Main Interactive Stage */}
           <div className="p-4 sm:p-6 bg-[#0c0e18]">
-            {activeTab === 'timeline' && (
-              <div className="space-y-4">
-                {/* Video Monitor Box */}
-                <div className="relative aspect-video max-h-[300px] w-full rounded-xl bg-black overflow-hidden border border-slate-800 group">
-                  <img
-                    src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80"
-                    alt="DaVinci Video Monitor Preview"
-                    className={`w-full h-full object-cover transition-all duration-500 ${
-                      selectedLut === 'teal-orange' ? 'contrast-125 saturate-125 hue-rotate-[-10deg]' :
-                      selectedLut === 'kodak' ? 'contrast-110 sepia-[0.25] saturate-110 brightness-95' :
-                      selectedLut === 'cyberpunk' ? 'contrast-130 hue-rotate-[90deg] saturate-150' : 'saturate-50 contrast-90 brightness-90'
-                    }`}
-                  />
-                  
-                  {/* Overlay Video Specs */}
-                  <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-2">
-                    <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
-                    REC 709 • 00:04:18:12 • 4K DCI
-                  </div>
+            <div className="space-y-4">
+              {/* Video Monitor Box */}
+              <div className="relative aspect-video max-h-[300px] w-full rounded-xl bg-black overflow-hidden border border-slate-800 group">
+                <img
+                  src={currentOpt.imageUrl || "https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80"}
+                  alt={currentOpt.title}
+                  className={`w-full h-full object-cover transition-all duration-500 ${
+                    selectedLut === 'teal-orange' ? 'contrast-125 saturate-125 hue-rotate-[-10deg]' :
+                    selectedLut === 'kodak' ? 'contrast-110 sepia-[0.25] saturate-110 brightness-95' :
+                    selectedLut === 'cyberpunk' ? 'contrast-130 hue-rotate-[90deg] saturate-150' : 'saturate-50 contrast-90 brightness-90'
+                  }`}
+                />
+                
+                {/* Overlay Video Specs */}
+                <div className="absolute top-3 left-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-emerald-400 flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />
+                  {currentOpt.badgeText || 'REC 709 • 00:04:18:12 • 4K DCI'}
+                </div>
 
-                  <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
-                    LUT: {selectedLut.toUpperCase()}
-                  </div>
+                <div className="absolute top-3 right-3 bg-black/70 backdrop-blur-md px-2.5 py-1 rounded-md border border-white/10 text-[10px] font-mono text-slate-300">
+                  LUT: {selectedLut.toUpperCase()}
+                </div>
 
-                  <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white flex items-center gap-2">
-                    <Flame className="w-3.5 h-3.5 text-blue-400" />
-                    <span>Zem TV Fast-Paced Cut Technique • Day 04 Lesson</span>
+                <div className="absolute bottom-3 left-3 bg-black/75 backdrop-blur-md px-3 py-1.5 rounded-lg border border-white/10 text-xs text-white flex items-center gap-2">
+                  <Flame className="w-3.5 h-3.5 text-blue-400" />
+                  <span>{currentOpt.title}</span>
+                </div>
+              </div>
+
+              {/* Timeline Multi-Track Visualizer */}
+              <div className="bg-[#111422] rounded-xl p-3 border border-slate-800/80 space-y-2">
+                <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
+                  <span>TIMELINE TRACKS & LABELS</span>
+                  <span className="text-blue-400">Playhead: {Math.round(scrubberPos)}%</span>
+                </div>
+
+                {/* Scrubber Bar */}
+                <div className="relative w-full h-2 bg-slate-900 rounded-full overflow-hidden cursor-pointer"
+                     onClick={(e) => {
+                       const rect = e.currentTarget.getBoundingClientRect();
+                       const clickX = e.clientX - rect.left;
+                       setScrubberPos((clickX / rect.width) * 100);
+                     }}>
+                  <div className="h-full bg-blue-500" style={{ width: `${scrubberPos}%` }} />
+                </div>
+
+                {/* Track 1: Primary Labels */}
+                <div className="grid grid-cols-12 gap-1 text-[10px] font-mono">
+                  <div className="col-span-5 bg-blue-900/40 border border-blue-500/30 text-blue-200 p-1.5 rounded truncate">
+                    {currentOpt.label1}
+                  </div>
+                  <div className="col-span-7 bg-indigo-900/40 border border-indigo-500/30 text-indigo-200 p-1.5 rounded truncate">
+                    {currentOpt.label2}
                   </div>
                 </div>
 
-                {/* Timeline Multi-Track Visualizer */}
-                <div className="bg-[#111422] rounded-xl p-3 border border-slate-800/80 space-y-2">
-                  <div className="flex items-center justify-between text-[11px] font-mono text-slate-400">
-                    <span>TIMELINE TRACKS</span>
-                    <span className="text-blue-400">Playhead: {Math.round(scrubberPos)}%</span>
+                {/* Track 2: Secondary Labels */}
+                <div className="grid grid-cols-12 gap-1 text-[10px] font-mono">
+                  <div className="col-span-6 bg-emerald-950 border border-emerald-500/30 text-emerald-300 p-1.5 rounded truncate">
+                    {currentOpt.label3}
                   </div>
-
-                  {/* Scrubber Bar */}
-                  <div className="relative w-full h-2 bg-slate-900 rounded-full overflow-hidden cursor-pointer"
-                       onClick={(e) => {
-                         const rect = e.currentTarget.getBoundingClientRect();
-                         const clickX = e.clientX - rect.left;
-                         setScrubberPos((clickX / rect.width) * 100);
-                       }}>
-                    <div className="h-full bg-blue-500" style={{ width: `${scrubberPos}%` }} />
-                  </div>
-
-                  {/* Track 1: Video Track */}
-                  <div className="grid grid-cols-12 gap-1 text-[10px] font-mono">
-                    <div className="col-span-3 bg-blue-900/40 border border-blue-500/30 text-blue-200 p-1.5 rounded truncate">
-                      V2: Title_Callout.drfx
-                    </div>
-                    <div className="col-span-4 bg-indigo-900/40 border border-indigo-500/30 text-indigo-200 p-1.5 rounded truncate">
-                      V1: 4K_A-Roll_Interview.mov
-                    </div>
-                    <div className="col-span-5 bg-slate-800 border border-slate-700 text-slate-200 p-1.5 rounded truncate">
-                      V1: B-Roll_Cinematic_Bldgs.mov
-                    </div>
-                  </div>
-
-                  {/* Track 2: Audio FX Track */}
-                  <div className="grid grid-cols-12 gap-1 text-[10px] font-mono">
-                    <div className="col-span-2 bg-emerald-950 border border-emerald-500/30 text-emerald-300 p-1 rounded truncate">
-                      A1: Voice_Isolate
-                    </div>
-                    <div className="col-span-4 bg-cyan-950 border border-cyan-500/30 text-cyan-300 p-1 rounded truncate">
-                      A2: Cinema_Whoosh_01.wav
-                    </div>
-                    <div className="col-span-3 bg-emerald-950 border border-emerald-500/30 text-emerald-300 p-1 rounded truncate">
-                      A3: Sub_Bass_Impact.wav
-                    </div>
-                    <div className="col-span-3 bg-cyan-950 border border-cyan-500/30 text-cyan-300 p-1 rounded truncate">
-                      A4: Ambient_Tape_Hiss.wav
-                    </div>
+                  <div className="col-span-6 bg-cyan-950 border border-cyan-500/30 text-cyan-300 p-1.5 rounded truncate">
+                    {currentOpt.label4 || 'Studio Audio Track'}
                   </div>
                 </div>
               </div>
-            )}
-
-            {activeTab === 'nodes' && (
-              <div className="space-y-4">
-                <div className="flex flex-wrap items-center justify-between gap-2 bg-[#121524] p-3 rounded-xl border border-slate-800">
-                  <span className="text-xs font-semibold text-slate-300">
-                    Live Color Grading Grade Styles:
-                  </span>
-                  <div className="flex items-center gap-2">
-                    {(['raw', 'teal-orange', 'kodak', 'cyberpunk'] as const).map(lut => (
-                      <button
-                        key={lut}
-                        onClick={() => {
-                          soundFx.playPop();
-                          setSelectedLut(lut);
-                        }}
-                        className={`px-3 py-1 text-xs font-semibold rounded-lg capitalize transition-all ${
-                          selectedLut === lut
-                            ? 'bg-blue-600 text-white shadow-xs'
-                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
-                        }`}
-                      >
-                        {lut}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Node Graph Tree Representation */}
-                <div className="p-4 bg-[#111424] rounded-xl border border-slate-800 flex flex-wrap items-center justify-around gap-4 text-xs font-mono">
-                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-700 text-center">
-                    <div className="text-[10px] text-slate-400 font-semibold">NODE 01</div>
-                    <div className="text-white font-semibold mt-1">Noise Reduction</div>
-                    <span className="text-[9px] text-emerald-400">Temporal 3-frame</span>
-                  </div>
-                  <div className="text-slate-500">→</div>
-                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-700 text-center">
-                    <div className="text-[10px] text-slate-400 font-semibold">NODE 02</div>
-                    <div className="text-white font-semibold mt-1">Primary Exposure</div>
-                    <span className="text-[9px] text-amber-400">Lift / Gamma / Gain</span>
-                  </div>
-                  <div className="text-slate-500">→</div>
-                  <div className="p-3 rounded-xl bg-[#162038] border border-blue-500/50 text-center shadow-xs">
-                    <div className="text-[10px] text-blue-400 font-semibold">NODE 03</div>
-                    <div className="text-white font-semibold mt-1">Teal & Orange LUT</div>
-                    <span className="text-[9px] text-blue-300">3D Cube Matrix</span>
-                  </div>
-                  <div className="text-slate-500">→</div>
-                  <div className="p-3 rounded-xl bg-slate-900 border border-slate-700 text-center">
-                    <div className="text-[10px] text-slate-400 font-semibold">NODE 04</div>
-                    <div className="text-white font-semibold mt-1">35mm Film Grain</div>
-                    <span className="text-[9px] text-indigo-400">4K Grain Overlay</span>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {activeTab === 'fairlight' && (
-              <div className="space-y-4">
-                <p className="text-xs text-slate-400">
-                  Click any studio sound sample to audition the exact Foley used in high-retention documentary editing:
-                </p>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                  {[
-                    { name: 'Cinematic Whoosh', type: 'whoosh', color: 'text-amber-400' },
-                    { name: 'Sub-Bass Impact', type: 'impact', color: 'text-blue-400' },
-                    { name: 'Glitch Transition', type: 'glitch', color: 'text-indigo-400' },
-                    { name: 'UI Pop Click', type: 'pop', color: 'text-emerald-400' }
-                  ].map(sfx => (
-                    <button
-                      key={sfx.name}
-                      onClick={() => triggerSfx(sfx.type)}
-                      className="p-3 bg-[#131728] hover:bg-[#1c223c] border border-slate-800 hover:border-slate-700 rounded-xl text-left transition-all group"
-                    >
-                      <div className="flex items-center justify-between mb-1.5">
-                        <Volume2 className={`w-4 h-4 ${sfx.color} group-hover:scale-110 transition-transform`} />
-                        <span className="text-[9px] font-mono text-slate-500 uppercase">24-bit WAV</span>
-                      </div>
-                      <div className="text-xs font-semibold text-white truncate">{sfx.name}</div>
-                      <div className="text-[10px] text-slate-400 mt-0.5">Click to Play 🔊</div>
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
+            </div>
           </div>
         </div>
 
