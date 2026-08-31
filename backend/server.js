@@ -29,7 +29,15 @@ initDbSchema();
 // Mount Routes
 app.use('/api/auth', authRoutes);
 
-// Server Health Check
+// Root & Health Check Endpoints
+app.get('/', (req, res) => {
+  res.json({ status: 'ok', message: '🚀 Stupid Editz Backend Server is Live!', timestamp: new Date().toISOString() });
+});
+
+app.get('/health', (req, res) => {
+  res.json({ status: 'ok', service: 'Stupid Editz Backend API', timestamp: new Date().toISOString() });
+});
+
 app.get('/api/health', (req, res) => {
   res.json({ status: 'ok', service: 'Stupid Editz Backend API', timestamp: new Date().toISOString() });
 });
