@@ -1,21 +1,24 @@
 # Use Node.js 20 LTS Alpine image
 FROM node:20-alpine
 
-# Set working directory to the root of the app
+# Set working directory
 WORKDIR /app
 
-# Copy the entire repository (from the root context)
+# Copy the build context
 COPY . .
 
-# Change working directory explicitly to the backend folder
-WORKDIR /app/backend
+# If built from the repo root, move backend files to the current directory
+RUN if [ -d "backend" ]; then \
+      cp -r backend/* ./ && \
+      rm -rf backend src public dist; \
+    fi
 
-# Install only production backend dependencies
+# Install only production dependencies
 RUN npm install --omit=dev
 
-# Default port (Railway injects process.env.PORT automatically)
+# Expose port
 EXPOSE 5000
 
-# Start Express server from inside /app/backend
+# Start Express server
 CMD ["node", "server.js"]
 
