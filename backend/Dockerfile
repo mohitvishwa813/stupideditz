@@ -4,14 +4,14 @@ FROM node:20-alpine
 # Set working directory inside container
 WORKDIR /app
 
-# Copy package definition files
-COPY package*.json ./
+# Copy backend package definition files
+COPY backend/package*.json ./
 
 # Install dependencies cleanly
-RUN npm ci --only=production
+RUN npm install --omit=dev
 
 # Copy backend source code
-COPY . .
+COPY backend/ .
 
 # Default port (Railway injects process.env.PORT automatically)
 EXPOSE 5000
