@@ -1,0 +1,4 @@
+# Vercel Deployment Ignore Rules
+backend/
+.env.local
+.git

@@ -20,7 +20,7 @@ import { soundFx } from '../utils/soundEffects';
 interface CoursesSectionProps {
   courses?: Course[];
   onSelectCourse: (course: Course) => void;
-  onOpenEnroll: (courseId: string) => void;
+  onOpenEnroll: (course: Course) => void;
   onOpenStudentPortal: (tab?: 'enrolled-courses' | 'classroom') => void;
   currentUser: UserProfile | null;
 }
@@ -193,7 +193,7 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
                     <button
                       onClick={() => {
                         soundFx.playClick();
-                        onOpenEnroll(course.id);
+                        onOpenEnroll(course);
                       }}
                       className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
                       id={`enroll-course-${course.id}`}

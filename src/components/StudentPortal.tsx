@@ -44,6 +44,9 @@ import { RecordingModal } from './modals/RecordingModal';
 import { MockTestModal } from './modals/MockTestModal';
 import { AskQuestionModal } from './modals/AskQuestionModal';
 
+import { Receipt, Settings, User, Phone, Mail, Lock, CreditCard } from 'lucide-react';
+import { StorageService } from '../services/storageService';
+
 interface StudentPortalProps {
   sessions: CourseSession[];
   currentUser: UserProfile;
@@ -51,7 +54,8 @@ interface StudentPortalProps {
   onNavigateToAdmin?: () => void;
   onNavigateHome: () => void;
   onOpenEnroll?: (courseId?: string) => void;
-  initialTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test';
+  onUpdateUser?: (updatedUser: UserProfile) => void;
+  initialTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'orders' | 'account';
 }
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({
@@ -61,13 +65,20 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onNavigateToAdmin,
   onNavigateHome,
   onOpenEnroll,
+  onUpdateUser,
   initialTab = 'enrolled-courses'
 }) => {
-  const [activeTab, setActiveTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'notes'>(initialTab);
+  const [activeTab, setActiveTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'notes' | 'orders' | 'account'>(initialTab);
   const [selectedWeek, setSelectedWeek] = useState<number | 'all'>('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedTimezone, setSelectedTimezone] = useState<'IST' | 'Dubai' | 'London' | 'New York' | 'Singapore'>('IST');
   const [expandedSessionId, setExpandedSessionId] = useState<string | null>(null);
+
+  // Profile Edit State for Account Details Tab
+  const [profileName, setProfileName] = useState(currentUser.name || '');
+  const [profilePhone, setProfilePhone] = useState(currentUser.phone || '');
+  const [profileAvatar, setProfileAvatar] = useState(currentUser.avatar || '');
+  const [profileSavedToast, setProfileSavedToast] = useState(false);
 
   // Sync initial tab if parent prop changes
   useEffect(() => {
@@ -119,27 +130,12 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   ]);
   const [newDoubtText, setNewDoubtText] = useState('');
 
-  // Enrolled courses list
-  const enrolledCoursesList = currentUser?.enrolledCourses && currentUser.enrolledCourses.length > 0 
-    ? currentUser.enrolledCourses 
-    : [
-        {
-          courseId: 'course-davinci-26',
-          courseTitle: 'DaVinci Resolve 19: High-Retention Masterclass',
-          batch: currentUser?.enrolledBatch || 'September 2026 Live Cohort',
-          enrolledDate: '10 Sep 2026',
-          progressPercent: 68,
-          completedDays: 12,
-          totalDays: 26,
-          nextSessionDay: 'Day 08',
-          nextSessionTopic: 'Secondary Color Grading & Shot Matching',
-          nextSessionTime: 'Today at 3:30 PM IST',
-          meetUrl: 'https://meet.google.com/std-edit-day08',
-          status: 'Active' as const,
-          thumbnail: 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=800&q=80',
-          instructor: 'Arjun Rajput'
-        }
-      ];
+  // Strict Access Control Check for Enrolled Masterclasses
+  const isUserEnrolled = Boolean(
+    currentUser?.isEnrolled && currentUser?.enrolledCourses && currentUser.enrolledCourses.length > 0
+  );
+
+  const enrolledCoursesList = isUserEnrolled ? (currentUser.enrolledCourses || []) : [];
 
   // Calculate Progress
   const completedCount = sessions.filter(s => s.status === 'completed').length;
@@ -211,111 +207,158 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <span className="text-[10px] uppercase font-mono font-bold px-2 py-0.5 rounded bg-[#00e5a3]/15 text-[#00e5a3] border border-[#00e5a3]/30">
                     STUDENT LEARNING HUB
                   </span>
-                  <span className="text-xs text-slate-400 font-mono">
-                    Batch: {currentUser.enrolledBatch || 'September 2026'}
-                  </span>
+                  {isUserEnrolled && currentUser.enrolledBatch && (
+                    <span className="text-xs text-slate-400 font-mono">
+                      Batch: {currentUser.enrolledBatch}
+                    </span>
+                  )}
                 </div>
-                <h1 className="text-xl sm:text-2xl font-black font-['Syne',sans-serif] text-white mt-1">
+                <h1 className="text-xl sm:text-2xl font-extrabold font-sans text-white mt-1">
                   Welcome back, {currentUser.name}
                 </h1>
               </div>
             </div>
-
-            {/* Quick Live Class CTA */}
-            <div className="flex items-center gap-3">
-              <a
-                href="https://meet.google.com/std-edit-day08"
-                target="_blank"
-                rel="noreferrer"
-                className="px-4 py-2 rounded-xl bg-gradient-to-r from-[#ff5722] to-[#ff7043] hover:from-[#f4511e] hover:to-[#ff5722] text-white font-extrabold text-xs flex items-center gap-2 shadow-lg shadow-[#ff5722]/20 transition-all hover:scale-[1.02]"
-                id="join-daily-live-btn"
-              >
-                <span className="w-2 h-2 rounded-full bg-white animate-ping" />
-                <span>Join Daily Live Class (3:30 PM IST)</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-
-              <button
-                onClick={() => setIsMockTestOpen(true)}
-                className="px-3.5 py-2 rounded-xl bg-[#171d32] hover:bg-[#202742] text-amber-300 border border-amber-400/30 text-xs font-bold flex items-center gap-1.5 transition-colors"
-                id="open-mock-test-btn"
-              >
-                <Award className="w-4 h-4" />
-                <span>Test Shortcuts</span>
-              </button>
-            </div>
           </div>
 
-          {/* Student Portal Navigation Tabs */}
-          <div className="mt-6 flex flex-wrap items-center gap-2 border-t border-slate-800/80 pt-4">
-            <button
-              onClick={() => {
-                soundFx.playClick();
-                setActiveTab('enrolled-courses');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'enrolled-courses'
-                  ? 'bg-[#00e5a3] text-slate-950 shadow-md font-black'
-                  : 'bg-[#141829] text-slate-300 hover:text-white hover:bg-[#1c223a]'
-              }`}
-              id="tab-enrolled-courses"
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Enrolled Courses</span>
-              <span className={`px-1.5 py-0.2 rounded text-[10px] font-mono ${
-                activeTab === 'enrolled-courses' ? 'bg-black/20 text-slate-950' : 'bg-black/40 text-[#00e5a3]'
-              }`}>
-                {enrolledCoursesList.length}
-              </span>
-            </button>
+          {/* Student Portal Navigation Tabs (4 Main Headers + Sub-Headers) */}
+          <div className="mt-6 border-t border-slate-800/80 pt-4 space-y-3">
+            {/* 1. Main Navigation Headers */}
+            <div className="flex flex-wrap items-center gap-2">
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('enrolled-courses');
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'enrolled-courses' || activeTab === 'classroom' || activeTab === 'doubts' || activeTab === 'notes'
+                    ? 'bg-blue-600 text-white shadow-md font-bold ring-1 ring-blue-400/40'
+                    : 'bg-[#141829] text-slate-400 hover:text-white hover:bg-[#1c223a]'
+                }`}
+                id="tab-enrolled-courses"
+              >
+                <GraduationCap className="w-4 h-4 text-blue-300" />
+                <span>Enrolled Courses</span>
+                <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-bold ${
+                  activeTab === 'enrolled-courses' ? 'bg-blue-900/60 text-blue-200' : 'bg-slate-800 text-slate-400'
+                }`}>
+                  {enrolledCoursesList.length}
+                </span>
+              </button>
 
-            <button
-              onClick={() => {
-                soundFx.playClick();
-                setActiveTab('classroom');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'classroom'
-                  ? 'bg-[#ff5722] text-white shadow-md font-bold'
-                  : 'bg-[#141829] text-slate-300 hover:text-white hover:bg-[#1c223a]'
-              }`}
-              id="tab-classroom"
-            >
-              <Calendar className="w-4 h-4" />
-              <span>26-Day Schedule & Lessons</span>
-            </button>
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('assets');
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'assets'
+                    ? 'bg-blue-600 text-white shadow-md font-bold ring-1 ring-blue-400/40'
+                    : 'bg-[#141829] text-slate-400 hover:text-white hover:bg-[#1c223a]'
+                }`}
+                id="tab-your-assets"
+              >
+                <FolderLock className="w-4 h-4 text-emerald-400" />
+                <span>Your Assets</span>
+              </button>
 
-            <button
-              onClick={() => {
-                soundFx.playClick();
-                setActiveTab('doubts');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'doubts'
-                  ? 'bg-[#ff5722] text-white shadow-md font-bold'
-                  : 'bg-[#141829] text-slate-300 hover:text-white hover:bg-[#1c223a]'
-              }`}
-              id="tab-doubts"
-            >
-              <HelpCircle className="w-4 h-4" />
-              <span>Saturday Doubts & Q&A</span>
-            </button>
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('orders');
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'orders'
+                    ? 'bg-blue-600 text-white shadow-md font-bold ring-1 ring-blue-400/40'
+                    : 'bg-[#141829] text-slate-400 hover:text-white hover:bg-[#1c223a]'
+                }`}
+                id="tab-orders-purchases"
+              >
+                <Receipt className="w-4 h-4 text-amber-400" />
+                <span>Orders & Purchases</span>
+              </button>
 
-            <button
-              onClick={() => {
-                soundFx.playClick();
-                setActiveTab('notes');
-              }}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                activeTab === 'notes'
-                  ? 'bg-[#ff5722] text-white shadow-md font-bold'
-                  : 'bg-[#141829] text-slate-300 hover:text-white hover:bg-[#1c223a]'
-              }`}
-              id="tab-notes"
-            >
-              <FileText className="w-4 h-4" />
-              <span>My DaVinci Notes</span>
-            </button>
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setActiveTab('account');
+                }}
+                className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  activeTab === 'account'
+                    ? 'bg-blue-600 text-white shadow-md font-bold ring-1 ring-blue-400/40'
+                    : 'bg-[#141829] text-slate-400 hover:text-white hover:bg-[#1c223a]'
+                }`}
+                id="tab-account-details"
+              >
+                <Settings className="w-4 h-4 text-indigo-400" />
+                <span>Account Details</span>
+              </button>
+            </div>
+
+            {/* 2. Sub-Headers (Shown ONLY if student is enrolled) */}
+            {isUserEnrolled && (activeTab === 'enrolled-courses' || activeTab === 'classroom' || activeTab === 'doubts' || activeTab === 'notes') && (
+              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-800/50">
+                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold mr-1 shrink-0">Sub-Sections:</span>
+                
+                <button
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('enrolled-courses');
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
+                    activeTab === 'enrolled-courses'
+                      ? 'bg-[#00e5a3] text-slate-950 shadow-xs'
+                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  Course Overview
+                </button>
+
+                <button
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('classroom');
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
+                    activeTab === 'classroom'
+                      ? 'bg-[#ff5722] text-white shadow-xs'
+                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <Calendar className="w-3.5 h-3.5" />
+                  <span>26-Day Schedule & Lessons</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('doubts');
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
+                    activeTab === 'doubts'
+                      ? 'bg-[#ff5722] text-white shadow-xs'
+                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <HelpCircle className="w-3.5 h-3.5" />
+                  <span>Saturday Doubts & Q&A</span>
+                </button>
+
+                <button
+                  onClick={() => {
+                    soundFx.playClick();
+                    setActiveTab('notes');
+                  }}
+                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
+                    activeTab === 'notes'
+                      ? 'bg-[#ff5722] text-white shadow-xs'
+                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
+                  }`}
+                >
+                  <FileText className="w-3.5 h-3.5" />
+                  <span>My DaVinci Notes</span>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
@@ -323,18 +366,58 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
       {/* Main Content Area */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-8">
         {/* ============================================================ */}
-        {/* TAB 1: ENROLLED COURSES (Exact user requested option) */}
+        {/* TAB 1: ENROLLED COURSES */}
         {/* ============================================================ */}
         {activeTab === 'enrolled-courses' && (
           <div className="space-y-8 animate-fadeIn" id="enrolled-courses-view">
-            <div>
-              <h2 className="text-2xl font-black font-['Syne',sans-serif] text-white">
-                My Enrolled Courses & Masterclasses
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                Access your active cohort classrooms, live Google Meet sessions, recordings, and project files.
-              </p>
-            </div>
+            {!isUserEnrolled ? (
+              <div className="bg-[#101424] border border-slate-800/80 rounded-3xl p-8 text-center max-w-2xl mx-auto my-12 space-y-4 shadow-2xl relative overflow-hidden">
+                <div className="w-16 h-16 rounded-2xl bg-blue-600/15 border border-blue-500/30 flex items-center justify-center text-blue-400 mx-auto shadow-inner">
+                  <FolderLock className="w-8 h-8" />
+                </div>
+                
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-blue-400">
+                    PREMIUM LIVE BOOTCAMP ACCESS
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">
+                    No Active Masterclass Enrollment
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+                    All Stupid Editz cohorts are premium live masterclasses. Enroll in an active cohort to unlock the 26-Day Schedule, Saturday Doubts & Q&A, and personal DaVinci notes.
+                  </p>
+                </div>
+
+                <div className="pt-3">
+                  <button
+                    onClick={() => {
+                      soundFx.playClick();
+                      onNavigateHome();
+                      setTimeout(() => {
+                        const elem = document.getElementById('courses-section');
+                        if (elem) {
+                          elem.scrollIntoView({ behavior: 'smooth' });
+                        }
+                      }, 100);
+                    }}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold text-xs flex items-center gap-2 mx-auto shadow-lg shadow-blue-600/25 transition-all hover:scale-[1.02]"
+                    id="explore-masterclasses-btn"
+                  >
+                    <Sparkles className="w-4 h-4 text-amber-300" />
+                    <span>Explore Masterclasses & Enroll Now</span>
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <h2 className="text-2xl font-bold text-white">
+                    My Enrolled Courses & Masterclasses
+                  </h2>
+                  <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                    Access your active cohort classrooms, live Google Meet sessions, recordings, and project files.
+                  </p>
+                </div>
 
             {/* Enrolled Courses Cards */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -364,7 +447,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                             {course.batch}
                           </span>
                         </div>
-                        <h3 className="text-base sm:text-lg font-bold text-white font-['Syne',sans-serif] leading-tight">
+                        <h3 className="text-base sm:text-lg font-extrabold text-white font-sans leading-tight">
                           {course.courseTitle}
                         </h3>
                         <p className="text-xs text-slate-400 mt-1 flex items-center gap-1.5">
@@ -474,8 +557,10 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </button>
               </div>
             </div>
-          </div>
+          </>
         )}
+      </div>
+    )}
 
         {/* ============================================================ */}
         {/* TAB 2: 26-DAY LIVE SCHEDULE & CLASSROOM */}
@@ -700,7 +785,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 <Flame className="w-4 h-4" />
                 Live Every Saturday at 4:00 PM IST
               </div>
-              <h2 className="text-2xl font-black font-['Syne',sans-serif] text-white">
+              <h2 className="text-2xl font-extrabold text-white font-sans">
                 Saturday Doubt-Clearing Session Hub
               </h2>
               <p className="text-xs sm:text-sm text-slate-400 mt-1">
@@ -765,62 +850,102 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         )}
 
         {/* ============================================================ */}
-        {/* TAB 4: 40GB CREATOR VAULT */}
+        {/* TAB 2: YOUR ASSETS */}
         {/* ============================================================ */}
         {activeTab === 'assets' && (
           <div className="space-y-6 animate-fadeIn" id="vault-view">
-            <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-              <div>
-                <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
-                  VIP STUDENT LOCKER
-                </span>
-                <h2 className="text-2xl font-black font-['Syne',sans-serif] text-white mt-1">
-                  40GB+ Masterclass Production Vault
-                </h2>
-                <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                  Download all licensed sound design assets, 3D LUTs, DaVinci Fusion macros, and project timelines.
-                </p>
-              </div>
+            {!isUserEnrolled ? (
+              <div className="bg-[#101424] border border-slate-800/80 rounded-3xl p-8 text-center max-w-2xl mx-auto my-12 space-y-4 shadow-2xl relative overflow-hidden">
+                <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto shadow-inner">
+                  <FolderLock className="w-8 h-8" />
+                </div>
+                
+                <div className="space-y-1">
+                  <span className="text-[10px] font-mono font-bold uppercase tracking-widest text-emerald-400">
+                    CREATOR ASSET VAULT
+                  </span>
+                  <h3 className="text-xl sm:text-2xl font-bold text-white">
+                    No Purchased Creator Assets Yet
+                  </h3>
+                  <p className="text-xs sm:text-sm text-slate-400 max-w-md mx-auto leading-relaxed">
+                    You have not purchased any standalone asset packs yet. Browse the Creator Vault on our homepage to get instant access to 4K film grains, 3D LUTs, and DaVinci Fusion macros.
+                  </p>
+                </div>
 
-              <a
-                href="https://drive.google.com/drive/folders/stupideditz-vip-vault"
-                target="_blank"
-                rel="noreferrer"
-                className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#00e5a3] to-[#00b884] hover:from-[#00b884] hover:to-[#00966d] text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-[#00e5a3]/20"
-              >
-                <Download className="w-4 h-4" />
-                <span>Download Entire 40GB ZIP Archive</span>
-              </a>
-            </div>
-
-            {/* Asset Categories Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {[
-                { title: 'Sound Effects (SFX)', size: '14.2 GB', format: '24-bit 48kHz WAV', count: '1,250+ Sounds', icon: Volume2, color: 'text-amber-400' },
-                { title: 'Cinematic 3D LUTs', size: '2.8 GB', format: '.cube (Rec.709 & Log)', count: '45 LUT Packs', icon: Sliders, color: 'text-[#ff7043]' },
-                { title: 'Fusion .drfx Macros', size: '6.4 GB', format: 'Titles, Callouts, Maps', count: '80+ Templates', icon: Layers, color: 'text-[#00e5a3]' },
-                { title: '4K Film Grains & Overlays', size: '18.1 GB', format: 'ProRes 422 4K', count: '35 Overlays', icon: Film, color: 'text-purple-400' },
-              ].map((pack, idx) => (
-                <div key={idx} className="bg-[#121627] border border-slate-800 rounded-2xl p-5 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <pack.icon className={`w-5 h-5 ${pack.color}`} />
-                    <span className="text-[11px] font-mono text-slate-400">{pack.size}</span>
-                  </div>
-                  <h4 className="text-sm font-bold text-white">{pack.title}</h4>
-                  <div className="text-xs text-slate-400 space-y-1">
-                    <div>Format: <span className="text-slate-300 font-mono">{pack.format}</span></div>
-                    <div>Includes: <span className="text-slate-300">{pack.count}</span></div>
-                  </div>
+                <div className="pt-3">
                   <button
-                    onClick={() => soundFx.playPop()}
-                    className="w-full py-2 bg-[#181e33] hover:bg-[#222b49] text-xs font-bold text-slate-200 rounded-xl transition-colors border border-slate-700 flex items-center justify-center gap-1.5"
+                    onClick={() => {
+                      soundFx.playClick();
+                      onNavigateHome();
+                      setTimeout(() => {
+                        const elem = document.getElementById('asset-vault-section');
+                        if (elem) elem.scrollIntoView({ behavior: 'smooth' });
+                      }, 100);
+                    }}
+                    className="px-6 py-3 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-slate-950 font-black text-xs flex items-center gap-2 mx-auto shadow-lg shadow-emerald-500/25 transition-all hover:scale-[1.02]"
+                    id="explore-assets-cta-btn"
                   >
-                    <Download className="w-3.5 h-3.5" />
-                    <span>Download Pack</span>
+                    <FolderDown className="w-4 h-4" />
+                    <span>Explore Creator Asset Vault</span>
                   </button>
                 </div>
-              ))}
-            </div>
+              </div>
+            ) : (
+              <>
+                <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                  <div>
+                    <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
+                      VIP STUDENT LOCKER
+                    </span>
+                    <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
+                      40GB+ Masterclass Production Vault
+                    </h2>
+                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                      Download all licensed sound design assets, 3D LUTs, DaVinci Fusion macros, and project timelines.
+                    </p>
+                  </div>
+
+                  <a
+                    href="https://drive.google.com/drive/folders/stupideditz-vip-vault"
+                    target="_blank"
+                    rel="noreferrer"
+                    className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#00e5a3] to-[#00b884] hover:from-[#00b884] hover:to-[#00966d] text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-[#00e5a3]/20"
+                  >
+                    <Download className="w-4 h-4" />
+                    <span>Download Entire 40GB ZIP Archive</span>
+                  </a>
+                </div>
+
+                {/* Asset Categories Grid */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { title: 'Sound Effects (SFX)', size: '14.2 GB', format: '24-bit 48kHz WAV', count: '1,250+ Sounds', icon: Volume2, color: 'text-amber-400' },
+                    { title: 'Cinematic 3D LUTs', size: '2.8 GB', format: '.cube (Rec.709 & Log)', count: '45 LUT Packs', icon: Sliders, color: 'text-[#ff7043]' },
+                    { title: 'Fusion .drfx Macros', size: '6.4 GB', format: 'Titles, Callouts, Maps', count: '80+ Templates', icon: Layers, color: 'text-[#00e5a3]' },
+                    { title: '4K Film Grains & Overlays', size: '18.1 GB', format: 'ProRes 422 4K', count: '35 Overlays', icon: Film, color: 'text-purple-400' },
+                  ].map((pack, idx) => (
+                    <div key={idx} className="bg-[#121627] border border-slate-800 rounded-2xl p-5 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <pack.icon className={`w-5 h-5 ${pack.color}`} />
+                        <span className="text-[11px] font-mono text-slate-400">{pack.size}</span>
+                      </div>
+                      <h4 className="text-sm font-bold text-white">{pack.title}</h4>
+                      <div className="text-xs text-slate-400 space-y-1">
+                        <div>Format: <span className="text-slate-300 font-mono">{pack.format}</span></div>
+                        <div>Includes: <span className="text-slate-300">{pack.count}</span></div>
+                      </div>
+                      <button
+                        onClick={() => soundFx.playPop()}
+                        className="w-full py-2 bg-[#181e33] hover:bg-[#222b49] text-xs font-bold text-slate-200 rounded-xl transition-colors border border-slate-700 flex items-center justify-center gap-1.5"
+                      >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Download Pack</span>
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -831,7 +956,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
           <div className="space-y-4 animate-fadeIn" id="notes-view">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-black font-['Syne',sans-serif] text-white">
+                <h2 className="text-xl font-extrabold text-white font-sans">
                   Personal DaVinci Resolve Scratchpad
                 </h2>
                 <p className="text-xs text-slate-400">
@@ -852,6 +977,227 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               className="w-full bg-[#121627] border border-slate-800 rounded-2xl p-4 text-xs sm:text-sm font-mono text-slate-200 focus:outline-none focus:border-[#ff5722] leading-relaxed shadow-inner"
               placeholder="Type keyboard shortcuts, project render notes, or questions here..."
             />
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 6: ORDERS & PURCHASES */}
+        {/* ============================================================ */}
+        {activeTab === 'orders' && (
+          <div className="space-y-6 animate-fadeIn" id="orders-view">
+            <div>
+              <span className="text-xs font-mono text-amber-400 font-bold uppercase tracking-wider">
+                RAZORPAY PAYMENT HISTORY
+              </span>
+              <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
+                Orders & Confirmed Invoices
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                View your confirmed masterclass enrollments and creator asset purchases.
+              </p>
+            </div>
+
+            {(!isUserEnrolled) ? (
+              <div className="bg-[#121627] border border-slate-800 rounded-3xl p-8 text-center space-y-3">
+                <div className="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400 mx-auto">
+                  <CreditCard className="w-6 h-6" />
+                </div>
+                <h4 className="text-base font-bold text-white">No Confirmed Orders Yet</h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  You have not completed any masterclass or asset pack purchases yet. Confirmed Razorpay transactions will appear here.
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {[
+                  {
+                    id: 'ORD-RZP-892401',
+                    title: 'DaVinci Resolve 19: High-Retention Masterclass',
+                    type: 'Course Cohort',
+                    batch: currentUser.enrolledBatch || 'September 2026 Live Cohort',
+                    amount: '₹4,999',
+                    date: '10 Sep 2026',
+                    paymentMethod: 'Razorpay UPI (GPay)',
+                    paymentId: 'pay_P89201948201',
+                    status: 'SUCCESSFUL'
+                  },
+                  {
+                    id: 'ORD-RZP-781920',
+                    title: 'Creator Production Asset Vault (40GB)',
+                    type: 'Asset Pack Locker',
+                    batch: 'VIP Access',
+                    amount: '₹999',
+                    date: '12 Aug 2026',
+                    paymentMethod: 'Razorpay Card',
+                    paymentId: 'pay_P78192038101',
+                    status: 'SUCCESSFUL'
+                  }
+                ].map(order => (
+                  <div
+                    key={order.id}
+                    className="bg-[#121627] border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  >
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2">
+                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+                          ✓ {order.status}
+                        </span>
+                        <span className="text-xs text-slate-400 font-mono">{order.id}</span>
+                      </div>
+
+                      <h4 className="text-sm font-bold text-white">{order.title}</h4>
+                      
+                      <div className="text-xs text-slate-400 font-mono space-x-3">
+                        <span>Date: <strong className="text-slate-200">{order.date}</strong></span>
+                        <span>•</span>
+                        <span>Payment ID: <strong className="text-slate-200">{order.paymentId}</strong></span>
+                      </div>
+                    </div>
+
+                    <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
+                      <div className="text-base font-black text-emerald-400 font-mono">
+                        {order.amount}
+                      </div>
+                      <button
+                        onClick={() => soundFx.playPop()}
+                        className="px-3.5 py-1.5 rounded-xl bg-[#181e33] hover:bg-[#222b49] text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors border border-slate-700"
+                      >
+                        <Download className="w-3.5 h-3.5 text-blue-400" />
+                        <span>Download Receipt</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ============================================================ */}
+        {/* TAB 7: ACCOUNT DETAILS */}
+        {/* ============================================================ */}
+        {activeTab === 'account' && (
+          <div className="space-y-6 animate-fadeIn max-w-2xl" id="account-view">
+            <div>
+              <span className="text-xs font-mono text-indigo-400 font-bold uppercase tracking-wider">
+                STUDENT PROFILE
+              </span>
+              <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
+                Account Settings
+              </h2>
+              <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                Manage your personal details, phone number, and avatar image.
+              </p>
+            </div>
+
+            {profileSavedToast && (
+              <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold flex items-center gap-2">
+                <CheckCircle2 className="w-4 h-4 shrink-0" />
+                <span>Account details saved successfully!</span>
+              </div>
+            )}
+
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                soundFx.playPop();
+                const updated: UserProfile = {
+                  ...currentUser,
+                  name: profileName.trim() || currentUser.name,
+                  phone: profilePhone.trim(),
+                  avatar: profileAvatar.trim() || currentUser.avatar,
+                };
+                StorageService.setCurrentUser(updated);
+                if (onUpdateUser) onUpdateUser(updated);
+                setProfileSavedToast(true);
+                setTimeout(() => setProfileSavedToast(false), 2500);
+              }}
+              className="bg-[#121627] border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-5"
+            >
+              {/* Avatar Preview & URL */}
+              <div className="flex items-center gap-4 bg-[#171b2d] p-4 rounded-2xl border border-slate-800">
+                <img
+                  src={profileAvatar || currentUser.avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'}
+                  alt="Avatar Preview"
+                  className="w-14 h-14 rounded-2xl object-cover ring-2 ring-blue-500/40 shrink-0"
+                />
+                <div className="flex-1 min-w-0 space-y-1">
+                  <label className="block text-[10px] font-semibold text-slate-400 uppercase font-mono">
+                    Avatar Image URL
+                  </label>
+                  <input
+                    type="url"
+                    placeholder="https://images.unsplash.com/..."
+                    value={profileAvatar}
+                    onChange={e => setProfileAvatar(e.target.value)}
+                    className="w-full bg-[#10131f] border border-slate-700/80 rounded-xl px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500 font-mono"
+                  />
+                </div>
+              </div>
+
+              {/* Full Name */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+                  Full Name
+                </label>
+                <div className="relative">
+                  <User className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Rahul Verma"
+                    value={profileName}
+                    onChange={e => setProfileName(e.target.value)}
+                    className="w-full bg-[#171b2d] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Phone Number */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+                  Phone Number
+                </label>
+                <div className="relative">
+                  <Phone className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="tel"
+                    placeholder="+91 98765 43210"
+                    value={profilePhone}
+                    onChange={e => setProfilePhone(e.target.value)}
+                    className="w-full bg-[#171b2d] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  />
+                </div>
+              </div>
+
+              {/* Email Address (READ-ONLY DISABLED WITH LOCK) */}
+              <div>
+                <label className="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5 font-mono flex items-center justify-between">
+                  <span>Email Address</span>
+                  <span className="text-[10px] text-amber-400 font-normal flex items-center gap-1">
+                    <Lock className="w-3 h-3" /> Cannot be edited
+                  </span>
+                </label>
+                <div className="relative">
+                  <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="email"
+                    disabled
+                    value={currentUser.email}
+                    className="w-full bg-[#10131f] border border-slate-800 rounded-xl pl-10 pr-4 py-2.5 text-sm text-slate-400 font-mono cursor-not-allowed opacity-75"
+                  />
+                </div>
+              </div>
+
+              {/* Save Button */}
+              <button
+                type="submit"
+                className="w-full py-3 px-4 bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm rounded-xl shadow-md flex items-center justify-center gap-2 transition-all active:scale-[0.99] mt-2"
+              >
+                <CheckCircle2 className="w-4 h-4" />
+                <span>Save Profile Details</span>
+              </button>
+            </form>
           </div>
         )}
       </div>

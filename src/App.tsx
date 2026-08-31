@@ -24,7 +24,7 @@ import { soundFx } from './utils/soundEffects';
 
 export default function App() {
   const navigate = useNavigate();
-  const [studentPortalTab, setStudentPortalTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test'>('enrolled-courses');
+  const [studentPortalTab, setStudentPortalTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'orders' | 'account'>('enrolled-courses');
   
   const [sessions, setSessions] = useState<CourseSession[]>(() => StorageService.getSessions());
   const [assets, setAssets] = useState<VideoAsset[]>(() => StorageService.getAssets());
@@ -37,6 +37,7 @@ export default function App() {
   const [loginModalMode, setLoginModalMode] = useState<'signin' | 'register'>('signin');
   const [isEnrollModalOpen, setIsEnrollModalOpen] = useState(false);
   const [enrollCourseId, setEnrollCourseId] = useState<string>('course-davinci-26');
+  const [selectedEnrollCourse, setSelectedEnrollCourse] = useState<Course | null>(null);
 
   // Load live data from Turso Cloud on mount
   useEffect(() => {
@@ -120,8 +121,15 @@ export default function App() {
     navigate('/');
   };
 
-  const handleOpenEnrollModal = (courseId?: string) => {
-    if (courseId) setEnrollCourseId(courseId);
+  const handleOpenEnrollModal = (courseOrId?: Course | string) => {
+    if (typeof courseOrId === 'object' && courseOrId !== null) {
+      setSelectedEnrollCourse(courseOrId);
+      setEnrollCourseId(courseOrId.id);
+    } else if (typeof courseOrId === 'string') {
+      setEnrollCourseId(courseOrId);
+      const found = courses.find(c => c.id === courseOrId);
+      if (found) setSelectedEnrollCourse(found);
+    }
     setIsEnrollModalOpen(true);
   };
 
@@ -143,6 +151,7 @@ export default function App() {
         onOpenLogin={handleOpenLogin}
         onLogout={handleLogout}
         onOpenEnroll={() => handleOpenEnrollModal('course-davinci-26')}
+        onUpdateUser={(updated) => setCurrentUser(updated)}
       />
 
       {/* Main View Router */}
@@ -228,6 +237,7 @@ export default function App() {
               onNavigateToAdmin={() => handleNavigate('admin-console')}
               onNavigateHome={() => handleNavigate('home')}
               onOpenEnroll={handleOpenEnrollModal}
+              onUpdateUser={(updated) => setCurrentUser(updated)}
             />
           } />
 
@@ -271,7 +281,13 @@ export default function App() {
       <EnrollModal
         isOpen={isEnrollModalOpen}
         onClose={() => setIsEnrollModalOpen(false)}
+        course={selectedEnrollCourse}
+        currentUser={currentUser}
         onEnrollSuccess={handleEnrollSuccess}
+        onLoginSuccess={(user) => {
+          setCurrentUser(user);
+          StorageService.setCurrentUser(user);
+        }}
       />
     </div>
   );

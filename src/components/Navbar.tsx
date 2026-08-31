@@ -19,9 +19,13 @@ import {
   ArrowRight,
   ExternalLink,
   Layers,
-  Award
+  Award,
+  Receipt,
+  Settings
 } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
+import { AccountSettingsModal } from './modals/AccountSettingsModal';
+import { OrdersHistoryModal } from './modals/OrdersHistoryModal';
 
 interface NavbarProps {
   currentView?: 'home' | 'student-portal' | 'admin-console' | 'assets' | 'breakdowns';
@@ -31,6 +35,7 @@ interface NavbarProps {
   onOpenLogin: (initialMode?: 'signin' | 'register') => void;
   onLogout: () => void;
   onOpenEnroll?: () => void;
+  onUpdateUser?: (updatedUser: UserProfile) => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -39,11 +44,14 @@ export const Navbar: React.FC<NavbarProps> = ({
   currentUser,
   onOpenLogin,
   onLogout,
-  onOpenEnroll
+  onOpenEnroll,
+  onUpdateUser
 }) => {
   const location = useLocation();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isAccountModalOpen, setIsAccountModalOpen] = useState(false);
+  const [isOrdersModalOpen, setIsOrdersModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const getActiveView = () => {
@@ -127,32 +135,6 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
           </button>
 
-          {/* Desktop Navigation Links */}
-          <nav className="hidden lg:flex items-center gap-1 bg-[#111422] p-1 rounded-xl border border-slate-800 text-xs font-semibold text-slate-300">
-            <button
-              onClick={() => onNavigate('home')}
-              className={`px-3.5 py-1.5 rounded-lg transition-all ${
-                currentView === 'home' 
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs' 
-                  : 'hover:text-white hover:bg-slate-800/70'
-              }`}
-              id="nav-overview"
-            >
-              Dashboard
-            </button>
-            <button
-              onClick={() => onNavigate('breakdowns')}
-              className={`flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg transition-all ${
-                currentView === 'breakdowns' 
-                  ? 'bg-blue-600 text-white font-semibold shadow-xs' 
-                  : 'hover:text-white hover:bg-slate-800/70'
-              }`}
-              id="nav-breakdowns"
-            >
-              <PlayCircle className="w-3.5 h-3.5 text-blue-400" />
-              Documentary Breakdowns
-            </button>
-          </nav>
         </div>
 
         {/* Right side Profile & Student Hub Actions */}
@@ -268,25 +250,50 @@ export const Navbar: React.FC<NavbarProps> = ({
                             setProfileDropdownOpen(false);
                             onNavigate('student-portal', 'enrolled-courses');
                           }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-emerald-400 flex items-center justify-between transition-colors"
+                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-emerald-400 flex items-center gap-2.5 transition-colors"
                           id="dropdown-enrolled-courses"
                         >
-                          <div className="flex items-center gap-2.5">
-                            <GraduationCap className="w-4 h-4 text-emerald-400" />
-                            <span>Enrolled Courses</span>
-                          </div>
+                          <GraduationCap className="w-4 h-4 text-emerald-400" />
+                          <span>Enrolled Courses</span>
                         </button>
+
                         <button
                           onClick={() => {
                             soundFx.playClick();
                             setProfileDropdownOpen(false);
-                            onNavigate('student-portal', 'classroom');
+                            onNavigate('student-portal', 'assets');
                           }}
-                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-white flex items-center gap-2.5 transition-colors"
-                          id="dropdown-classroom-schedule"
+                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-[#00e5a3] flex items-center gap-2.5 transition-colors"
+                          id="dropdown-your-assets"
                         >
-                          <Calendar className="w-4 h-4 text-blue-400" />
-                          <span>26-Day Live Schedule</span>
+                          <FolderLock className="w-4 h-4 text-blue-400" />
+                          <span>Your Assets</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            soundFx.playClick();
+                            setProfileDropdownOpen(false);
+                            setIsOrdersModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-amber-300 flex items-center gap-2.5 transition-colors"
+                          id="dropdown-orders-history"
+                        >
+                          <Receipt className="w-4 h-4 text-amber-400" />
+                          <span>Orders & Purchases</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            soundFx.playClick();
+                            setProfileDropdownOpen(false);
+                            setIsAccountModalOpen(true);
+                          }}
+                          className="w-full px-4 py-2.5 text-left text-xs font-semibold text-slate-200 hover:bg-[#1a2034] hover:text-blue-400 flex items-center gap-2.5 transition-colors"
+                          id="dropdown-account-details"
+                        >
+                          <Settings className="w-4 h-4 text-indigo-400" />
+                          <span>Account Details</span>
                         </button>
                       </>
                     )}
@@ -339,6 +346,27 @@ export const Navbar: React.FC<NavbarProps> = ({
           )}
         </div>
       </div>
+
+      {/* Account Settings Modal */}
+      {currentUser && isAccountModalOpen && (
+        <AccountSettingsModal
+          isOpen={isAccountModalOpen}
+          onClose={() => setIsAccountModalOpen(false)}
+          currentUser={currentUser}
+          onUpdateUser={(updated) => {
+            if (onUpdateUser) onUpdateUser(updated);
+          }}
+        />
+      )}
+
+      {/* Orders & Payments History Modal */}
+      {currentUser && isOrdersModalOpen && (
+        <OrdersHistoryModal
+          isOpen={isOrdersModalOpen}
+          onClose={() => setIsOrdersModalOpen(false)}
+          currentUser={currentUser}
+        />
+      )}
     </header>
   );
 };
