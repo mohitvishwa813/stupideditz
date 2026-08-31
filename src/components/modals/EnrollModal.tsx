@@ -84,11 +84,11 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
     return () => clearInterval(interval);
   }, [resendTimer]);
 
-  if (!isOpen) return null;
+  if (!isOpen || !course) return null;
 
   // Dynamic Course Pricing
-  const basePrice = course ? course.price : 3240;
-  const originalPrice = course ? course.originalPrice : 6480;
+  const basePrice = course.price;
+  const originalPrice = course.originalPrice;
   const discountAmount = couponApplied ? Math.round(basePrice * 0.2) : 0;
   const finalPrice = basePrice - discountAmount;
 
@@ -238,8 +238,8 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
         {/* Dynamic Course Banner */}
         <div className="bg-[#161a29] border border-slate-800 rounded-2xl p-4 mb-6 flex items-center gap-4">
           <img
-            src={course?.thumbnail || 'https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=400&q=80'}
-            alt={course?.title || 'Masterclass'}
+            src={course.thumbnail}
+            alt={course.title}
             className="w-16 h-16 sm:w-20 sm:h-20 rounded-xl object-cover ring-1 ring-slate-700 shrink-0"
           />
           <div className="flex-1 min-w-0">
@@ -247,10 +247,10 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
               {selectedBatch}
             </span>
             <h3 className="text-base sm:text-lg font-extrabold text-white mt-1 leading-tight truncate">
-              {course?.title || 'DaVinci Resolve 19: High-Retention Masterclass'}
+              {course.title}
             </h3>
             <p className="text-xs text-slate-400 mt-0.5 truncate">
-              Instructor: <span className="text-slate-200 font-semibold">{course?.instructorName || 'Arjun Rajput'}</span>
+              Instructor: <span className="text-slate-200 font-semibold">{course.instructorName}</span>
             </p>
           </div>
         </div>
@@ -262,10 +262,10 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
             Limited Cohort Seats Available
           </div>
           <h2 className="text-2xl font-extrabold text-white tracking-tight">
-            Secure Your Cohort Seat
+            Secure Your Seat
           </h2>
-          <p className="text-xs text-slate-400 mt-1">
-            Full 26-Day live interactive access, 40GB+ asset vault, and doubt clearing sessions.
+          <p className="text-xs text-slate-400 mt-2 leading-relaxed">
+            {course.subtitle}
           </p>
         </div>
 
