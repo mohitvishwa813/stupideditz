@@ -80,6 +80,15 @@ export interface YouTubeBreakdown {
   }[];
 }
 
+export interface BundlePromo {
+  badgeText: string;
+  title: string;
+  description: string;
+  currentPrice: number;
+  originalPrice: number;
+  driveLink: string;
+}
+
 export interface StudentSubmission {
   id: string;
   sessionId: string;

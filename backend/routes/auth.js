@@ -255,8 +255,8 @@ router.post('/login', async (req, res) => {
       email: String(row.email),
       role: String(row.role) === 'admin' ? 'admin' : 'student',
       avatar: String(row.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'),
-      isEnrolled: true,
-      enrolledBatch: 'September 2026 Live Cohort',
+      isEnrolled: false,
+      enrolledBatch: '',
       enrolledCourses: []
     };
 

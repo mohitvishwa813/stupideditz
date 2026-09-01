@@ -5,7 +5,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption } from './types';
+import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption, BundlePromo } from './types';
 import { INITIAL_HERO_OPTIONS } from './data/initialData';
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER, GUEST_USER } from './services/storageService';
 import { DbService } from './services/dbService';
@@ -29,6 +29,7 @@ export default function App() {
   const [sessions, setSessions] = useState<CourseSession[]>(() => StorageService.getSessions());
   const [assets, setAssets] = useState<VideoAsset[]>(() => StorageService.getAssets());
   const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>(() => StorageService.getYouTubeBreakdowns());
+  const [bundlePromo, setBundlePromo] = useState<BundlePromo>(() => StorageService.getBundlePromo());
   const [courses, setCourses] = useState<Course[]>(() => StorageService.getCourses());
   const [heroOptions, setHeroOptions] = useState<HeroShowcaseOption[]>(INITIAL_HERO_OPTIONS);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getCurrentUser());
@@ -44,9 +45,10 @@ export default function App() {
     let isMounted = true;
     async function loadTursoData() {
       try {
-        const [dbSessions, dbBreakdowns, dbCourses, dbStudents, dbAssets, dbHeroOptions] = await Promise.all([
+        const [dbSessions, dbBreakdowns, dbPromo, dbCourses, dbStudents, dbAssets, dbHeroOptions] = await Promise.all([
           DbService.getSessions(),
           DbService.getYouTubeBreakdowns(),
+          DbService.getBundlePromo(),
           DbService.getCourses(),
           DbService.getStudents(),
           DbService.getAssets(),
@@ -55,6 +57,7 @@ export default function App() {
         if (isMounted) {
           if (dbSessions && dbSessions.length > 0) setSessions(dbSessions);
           if (dbBreakdowns && dbBreakdowns.length > 0) setYoutubeBreakdowns(dbBreakdowns);
+          if (dbPromo) setBundlePromo(dbPromo);
           if (dbCourses && dbCourses.length > 0) setCourses(dbCourses);
           if (dbAssets && dbAssets.length > 0) setAssets(dbAssets);
           if (dbHeroOptions && dbHeroOptions.length > 0) setHeroOptions(dbHeroOptions);
@@ -102,14 +105,19 @@ export default function App() {
 
   const handleLoginSuccess = (
     user: UserProfile, 
-    redirectView?: 'home' | 'student-portal' | 'admin-console' | 'enrolled-courses'
+    redirectView?: 'home' | 'student-portal' | 'admin-console' | 'enrolled-courses' | 'none'
   ) => {
     setCurrentUser(user);
+    
+    if (redirectView === 'none') return;
+
     if (redirectView === 'admin-console' || user.role === 'admin') {
       navigate('/admin-console');
-    } else {
+    } else if (redirectView === 'student-portal' || redirectView === 'enrolled-courses') {
       setStudentPortalTab('enrolled-courses');
       navigate('/student-portal');
+    } else if (redirectView === 'home') {
+      navigate('/');
     }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
@@ -189,6 +197,7 @@ export default function App() {
               <div id="asset-vault-section">
                 <AssetVaultSection
                   assets={assets}
+                  bundlePromo={bundlePromo}
                   currentUser={currentUser}
                   onOpenLoginModal={() => setIsLoginModalOpen(true)}
                 />
@@ -209,6 +218,7 @@ export default function App() {
             <div className="pt-6">
               <AssetVaultSection
                 assets={assets}
+                bundlePromo={bundlePromo}
                 currentUser={currentUser}
                 onOpenLoginModal={() => setIsLoginModalOpen(true)}
               />
@@ -255,6 +265,10 @@ export default function App() {
               onUpdateCourses={handleUpdateCourses}
               heroOptions={heroOptions}
               onUpdateHeroOptions={(newHeroOptions) => setHeroOptions(newHeroOptions)}
+              youtubeBreakdowns={youtubeBreakdowns}
+              onUpdateYoutubeBreakdowns={(b) => setYoutubeBreakdowns(b)}
+              bundlePromo={bundlePromo}
+              onUpdateBundlePromo={(p) => setBundlePromo(p)}
             />
           } />
 

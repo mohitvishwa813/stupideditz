@@ -72,7 +72,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     if (apiRes.success && apiRes.user) {
       soundFx.playPop();
       StorageService.setCurrentUser(apiRes.user);
-      onLoginSuccess(apiRes.user, apiRes.user.role === 'admin' ? 'admin-console' : 'student-portal');
+      onLoginSuccess(apiRes.user, apiRes.user.role === 'admin' ? 'admin-console' : 'home');
       setIsLoading(false);
       onClose();
       return;
@@ -83,7 +83,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     if (dbUser) {
       soundFx.playPop();
       StorageService.setCurrentUser(dbUser);
-      onLoginSuccess(dbUser, dbUser.role === 'admin' ? 'admin-console' : 'student-portal');
+      onLoginSuccess(dbUser, dbUser.role === 'admin' ? 'admin-console' : 'home');
       setIsLoading(false);
       onClose();
       return;
@@ -163,7 +163,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       soundFx.playPop();
       confetti({ particleCount: 50, spread: 60, origin: { y: 0.6 } });
       StorageService.setCurrentUser(res.user);
-      onLoginSuccess(res.user, 'student-portal');
+      onLoginSuccess(res.user, 'home');
       onClose();
     } else {
       setErrorMsg(res.message || 'OTP verification failed.');

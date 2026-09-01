@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { VideoAsset, AssetCategory, UserProfile } from '../types';
+import { VideoAsset, AssetCategory, UserProfile, BundlePromo } from '../types';
 import { 
   Download, 
   Play, 
@@ -23,6 +23,7 @@ import confetti from 'canvas-confetti';
 
 interface AssetVaultSectionProps {
   assets: VideoAsset[];
+  bundlePromo?: BundlePromo;
   currentUser?: UserProfile | null;
   onOpenLoginModal?: () => void;
   onSelectVideoBreakdown?: (videoTitle: string) => void;
@@ -30,6 +31,7 @@ interface AssetVaultSectionProps {
 
 export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   assets,
+  bundlePromo,
   currentUser,
   onOpenLoginModal,
   onSelectVideoBreakdown,
@@ -170,40 +172,41 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
         </div>
         
         {/* All-in-one Bundle Promo */}
-        <div className="bg-gradient-to-r from-blue-600/20 via-indigo-600/10 to-transparent border border-blue-500/30 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
-          <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full" />
-          <div className="relative z-10 space-y-3 max-w-xl">
-            <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest border border-blue-500/30">
-              <Sparkles className="w-3 h-3" />
-              Limited Time Cohort Bundle
+        {bundlePromo && (
+          <div className="bg-gradient-to-r from-blue-600/20 via-indigo-600/10 to-transparent border border-blue-500/30 rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 overflow-hidden relative group">
+            <div className="absolute top-0 right-0 -mt-8 -mr-8 w-64 h-64 bg-blue-500/10 blur-3xl rounded-full" />
+            <div className="relative z-10 space-y-3 max-w-xl">
+              <div className="inline-flex items-center gap-2 px-2.5 py-1 rounded-lg bg-blue-500/20 text-blue-400 text-[10px] font-bold uppercase tracking-widest border border-blue-500/30">
+                <Sparkles className="w-3 h-3" />
+                {bundlePromo.badgeText}
+              </div>
+              <h3 className="text-xl md:text-2xl font-bold text-white">{bundlePromo.title}</h3>
+              <p className="text-sm text-slate-400 leading-relaxed">
+                {bundlePromo.description}
+              </p>
             </div>
-            <h3 className="text-xl md:text-2xl font-bold text-white">Unlock Every Premium Pack Instantly</h3>
-            <p className="text-sm text-slate-400 leading-relaxed">
-              Get the Most Premium Assets, 9GB Basic Pack, Fusion Pack, and all SFX libraries (15GB+ total) for a one-time price. Everything you need for high-retention documentary editing.
-            </p>
-          </div>
-          <div className="relative z-10 flex flex-col items-center md:items-end gap-3 shrink-0">
-            <div className="flex items-baseline gap-2">
-              <span className="text-3xl font-black text-white">₹1099</span>
-              <span className="text-sm text-slate-500 line-through">₹1795</span>
-            </div>
-            <button 
-              onClick={() => {
-                if (!currentUser) {
-                  soundFx.playGlitch();
-                  if (onOpenLoginModal) {
-                    onOpenLoginModal();
+            <div className="relative z-10 flex flex-col items-center md:items-end gap-3 shrink-0">
+              <div className="flex items-baseline gap-2">
+                <span className="text-3xl font-black text-white">₹{bundlePromo.currentPrice}</span>
+                <span className="text-sm text-slate-500 line-through">₹{bundlePromo.originalPrice}</span>
+              </div>
+              <button 
+                onClick={() => {
+                  if (!currentUser) {
+                    soundFx.playGlitch();
+                    if (onOpenLoginModal) {
+                      onOpenLoginModal();
+                    }
+                    return;
                   }
-                  return;
-                }
-                soundFx.playPop();
-                window.open('https://drive.google.com/drive/folders/1qpg_kNvsxW46e_Zmdh4c0JDdTMrULQDV?usp=sharing', '_blank');
-                confetti({
-                  particleCount: 100,
-                  spread: 70,
-                  origin: { y: 0.6 }
-                });
-              }}
+                  soundFx.playPop();
+                  window.open(bundlePromo.driveLink, '_blank');
+                  confetti({
+                    particleCount: 100,
+                    spread: 70,
+                    origin: { y: 0.6 }
+                  });
+                }}
               className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
             >
               <Flame className="w-4 h-4 text-amber-400" />
@@ -212,6 +215,7 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
             <p className="text-[10px] text-slate-500">Instant Access via Google Drive</p>
           </div>
         </div>
+        )}
 
         {/* Assets Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">

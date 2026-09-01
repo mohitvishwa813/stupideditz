@@ -1,4 +1,13 @@
-import { CourseSession, VideoAsset, YouTubeBreakdown, RegisteredStudent, MockTestQuestion, HeroShowcaseOption } from '../types';
+import { CourseSession, VideoAsset, YouTubeBreakdown, BundlePromo, RegisteredStudent, MockTestQuestion, HeroShowcaseOption } from '../types';
+
+export const INITIAL_BUNDLE_PROMO: BundlePromo = {
+  badgeText: 'Limited Time Cohort Bundle',
+  title: 'Unlock Every Premium Pack Instantly',
+  description: 'Get the Most Premium Assets, 9GB Basic Pack, Fusion Pack, and all SFX libraries (15GB+ total) for a one-time price. Everything you need for high-retention documentary editing.',
+  currentPrice: 1099,
+  originalPrice: 1795,
+  driveLink: 'https://drive.google.com/drive/folders/1qpg_kNvsxW46e_Zmdh4c0JDdTMrULQDV?usp=sharing'
+};
 
 export const INITIAL_SESSIONS: CourseSession[] = [
   // Week 1 (15 Sep – 21 Sep)

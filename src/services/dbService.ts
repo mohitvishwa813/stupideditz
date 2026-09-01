@@ -52,6 +52,47 @@ export class DbService {
           display_order INTEGER DEFAULT 1
         )
       `);
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS youtube_breakdowns (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          youtube_id TEXT NOT NULL,
+          video_url TEXT NOT NULL,
+          thumbnail_url TEXT NOT NULL,
+          views_count TEXT,
+          duration TEXT,
+          description TEXT,
+          assets_used TEXT,
+          created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS breakdown_timeline_markers (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          breakdown_id TEXT NOT NULL,
+          timestamp TEXT NOT NULL,
+          seconds INTEGER NOT NULL,
+          label TEXT NOT NULL,
+          effect TEXT,
+          asset_name TEXT,
+          display_order INTEGER DEFAULT 1
+        )
+      `);
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS bundle_promos (
+          id TEXT PRIMARY KEY,
+          badge_text TEXT,
+          title TEXT NOT NULL,
+          description TEXT,
+          current_price REAL NOT NULL,
+          original_price REAL NOT NULL,
+          drive_link TEXT NOT NULL,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
     } catch (e) {
       console.warn('Turso tables initialization note:', e);
     }
@@ -257,8 +298,16 @@ export class DbService {
   // Fetch YouTube Breakdowns from Turso
   static async getYouTubeBreakdowns(): Promise<YouTubeBreakdown[]> {
     try {
-      const breakdownsRes = await turso.execute('SELECT * FROM youtube_breakdowns ORDER BY created_at ASC');
-      if (breakdownsRes.rows.length === 0) return INITIAL_YOUTUBE_BREAKDOWNS;
+      await this.initCourseTables();
+      let breakdownsRes = await turso.execute('SELECT * FROM youtube_breakdowns ORDER BY created_at ASC');
+      
+      if (breakdownsRes.rows.length === 0) {
+        console.log('⚡ [Turso DB] Empty youtube_breakdowns table detected. Auto-seeding initial data...');
+        for (let i = 0; i < INITIAL_YOUTUBE_BREAKDOWNS.length; i++) {
+          await this.saveYouTubeBreakdownToDb(INITIAL_YOUTUBE_BREAKDOWNS[i], i + 1);
+        }
+        breakdownsRes = await turso.execute('SELECT * FROM youtube_breakdowns ORDER BY created_at ASC');
+      }
 
       const markersRes = await turso.execute('SELECT * FROM breakdown_timeline_markers ORDER BY display_order ASC');
 
@@ -283,7 +332,7 @@ export class DbService {
           views: String(r.views_count || '1M views'),
           duration: String(r.duration || '15:00'),
           description: String(r.description || ''),
-          assetsUsed: ['asset-1', 'asset-2'],
+          assetsUsed: r.assets_used ? JSON.parse(r.assets_used) : [],
           timelineMarkers: markers
         };
       });
@@ -292,6 +341,104 @@ export class DbService {
       return INITIAL_YOUTUBE_BREAKDOWNS;
     }
   }
+
+  static async saveYouTubeBreakdownToDb(breakdown: YouTubeBreakdown, displayOrder: number): Promise<void> {
+    try {
+      await turso.execute({
+        sql: `INSERT INTO youtube_breakdowns 
+          (id, title, youtube_id, video_url, thumbnail_url, views_count, duration, description, assets_used) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+          title=excluded.title, youtube_id=excluded.youtube_id, video_url=excluded.video_url, thumbnail_url=excluded.thumbnail_url,
+          views_count=excluded.views_count, duration=excluded.duration, description=excluded.description, assets_used=excluded.assets_used`,
+        args: [
+          breakdown.id, breakdown.title, breakdown.youtubeId, breakdown.videoUrl, breakdown.thumbnailUrl,
+          breakdown.views, breakdown.duration, breakdown.description, JSON.stringify(breakdown.assetsUsed || [])
+        ]
+      });
+
+      // Delete existing markers for this breakdown
+      await turso.execute({
+        sql: `DELETE FROM breakdown_timeline_markers WHERE breakdown_id = ?`,
+        args: [breakdown.id]
+      });
+
+      // Insert new markers
+      for (let i = 0; i < breakdown.timelineMarkers.length; i++) {
+        const m = breakdown.timelineMarkers[i];
+        await turso.execute({
+          sql: `INSERT INTO breakdown_timeline_markers 
+            (breakdown_id, timestamp, seconds, label, effect, asset_name, display_order) 
+            VALUES (?, ?, ?, ?, ?, ?, ?)`,
+          args: [
+            breakdown.id, m.timestamp, m.seconds, m.label, m.effect, m.assetName || null, i + 1
+          ]
+        });
+      }
+    } catch (e) {
+      console.error('Error saving youtube breakdown to DB', e);
+    }
+  }
+
+  static async deleteYouTubeBreakdownFromDb(breakdownId: string): Promise<boolean> {
+    try {
+      await turso.execute({
+        sql: `DELETE FROM breakdown_timeline_markers WHERE breakdown_id = ?`,
+        args: [breakdownId]
+      });
+      await turso.execute({
+        sql: `DELETE FROM youtube_breakdowns WHERE id = ?`,
+        args: [breakdownId]
+      });
+      return true;
+    } catch (e) {
+      console.error('Error deleting youtube breakdown from DB', e);
+      return false;
+    }
+  }
+
+  // Bundle Promo
+  static async getBundlePromo(): Promise<BundlePromo> {
+    try {
+      await this.initCourseTables();
+      const res = await turso.execute('SELECT * FROM bundle_promos WHERE id = "main_promo"');
+      if (res.rows.length === 0) {
+        await this.saveBundlePromoToDb(INITIAL_BUNDLE_PROMO);
+        return INITIAL_BUNDLE_PROMO;
+      }
+      
+      const r = res.rows[0] as any;
+      return {
+        badgeText: String(r.badge_text),
+        title: String(r.title),
+        description: String(r.description),
+        currentPrice: Number(r.current_price),
+        originalPrice: Number(r.original_price),
+        driveLink: String(r.drive_link)
+      };
+    } catch (err) {
+      return INITIAL_BUNDLE_PROMO;
+    }
+  }
+
+  static async saveBundlePromoToDb(promo: BundlePromo): Promise<void> {
+    try {
+      await turso.execute({
+        sql: `INSERT INTO bundle_promos 
+          (id, badge_text, title, description, current_price, original_price, drive_link) 
+          VALUES ("main_promo", ?, ?, ?, ?, ?, ?)
+          ON CONFLICT(id) DO UPDATE SET
+          badge_text=excluded.badge_text, title=excluded.title, description=excluded.description,
+          current_price=excluded.current_price, original_price=excluded.original_price, drive_link=excluded.drive_link`,
+        args: [
+          promo.badgeText, promo.title, promo.description, promo.currentPrice, promo.originalPrice, promo.driveLink
+        ]
+      });
+    } catch (e) {
+      console.error('Error saving bundle promo to DB', e);
+    }
+  }
+
 
   // Save/Update Session in Turso
   static async updateSession(id: string, updates: Partial<CourseSession>): Promise<void> {

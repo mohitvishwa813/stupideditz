@@ -122,7 +122,7 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
 
     if (res.success && res.user) {
       soundFx.playPop();
-      onLoginSuccess(res.user);
+      onLoginSuccess(res.user, 'none');
     } else {
       soundFx.playGlitch();
       setAuthError(res.message || 'Invalid credentials. Please try again.');
@@ -190,7 +190,7 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
 
     if (res.success && res.user) {
       soundFx.playPop();
-      onLoginSuccess(res.user);
+      onLoginSuccess(res.user, 'none');
     } else {
       soundFx.playGlitch();
       setAuthError(res.message || 'Invalid OTP code.');

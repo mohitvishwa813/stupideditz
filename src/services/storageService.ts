@@ -2,19 +2,21 @@ import {
   CourseSession, 
   VideoAsset, 
   YouTubeBreakdown, 
+  BundlePromo,
   RegisteredStudent, 
   StudentSubmission, 
   UserProfile,
   EnrolledCourseInfo,
   Course
 } from '../types';
-import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS } from '../data/initialData';
+import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS, INITIAL_BUNDLE_PROMO } from '../data/initialData';
 import { COURSES_CATALOG, DEFAULT_ENROLLED_COURSES } from '../data/coursesData';
 
 const STORAGE_KEYS = {
   SESSIONS: 'stupideditz_sessions_v2',
   ASSETS: 'stupideditz_assets_v2',
   YOUTUBE: 'stupideditz_youtube_v2',
+  PROMO: 'stupideditz_promo_v2',
   STUDENTS: 'stupideditz_students_v2',
   SUBMISSIONS: 'stupideditz_submissions_v2',
   USER: 'stupideditz_user_v2',
@@ -184,6 +186,33 @@ export class StorageService {
       // fallback
     }
     return INITIAL_YOUTUBE_BREAKDOWNS;
+  }
+
+  static saveYouTubeBreakdowns(breakdowns: YouTubeBreakdown[]): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.YOUTUBE, JSON.stringify(breakdowns));
+    } catch (e) {
+      console.error('Error saving youtube breakdowns', e);
+    }
+  }
+
+  // Bundle Promo
+  static getBundlePromo(): BundlePromo {
+    try {
+      const data = localStorage.getItem(STORAGE_KEYS.PROMO);
+      if (data) return JSON.parse(data);
+    } catch {
+      // fallback
+    }
+    return INITIAL_BUNDLE_PROMO;
+  }
+
+  static saveBundlePromo(promo: BundlePromo): void {
+    try {
+      localStorage.setItem(STORAGE_KEYS.PROMO, JSON.stringify(promo));
+    } catch (e) {
+      console.error('Error saving bundle promo', e);
+    }
   }
 
   // Students

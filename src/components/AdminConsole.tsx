@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption } from '../types';
+import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption, YouTubeBreakdown, BundlePromo } from '../types';
 import { StorageService } from '../services/storageService';
 import { DbService } from '../services/dbService';
 import { INITIAL_HERO_OPTIONS } from '../data/initialData';
@@ -43,6 +43,7 @@ import { AddStudentModal } from './modals/AddStudentModal';
 import { EditStudentModal } from './modals/EditStudentModal';
 import { EditAssetModal } from './modals/EditAssetModal';
 import { AddEditCourseModal } from './modals/AddEditCourseModal';
+import { AddEditBreakdownModal } from './modals/AddEditBreakdownModal';
 import confetti from 'canvas-confetti';
 
 interface AdminConsoleProps {
@@ -57,6 +58,10 @@ interface AdminConsoleProps {
   onUpdateCourses: (courses: Course[]) => void;
   heroOptions?: HeroShowcaseOption[];
   onUpdateHeroOptions?: (options: HeroShowcaseOption[]) => void;
+  youtubeBreakdowns?: YouTubeBreakdown[];
+  onUpdateYoutubeBreakdowns?: (breakdowns: YouTubeBreakdown[]) => void;
+  bundlePromo?: BundlePromo;
+  onUpdateBundlePromo?: (promo: BundlePromo) => void;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
@@ -71,8 +76,12 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateCourses,
   heroOptions,
   onUpdateHeroOptions,
+  youtubeBreakdowns,
+  onUpdateYoutubeBreakdowns,
+  bundlePromo,
+  onUpdateBundlePromo,
 }) => {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'hero'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'hero' | 'promos'>('schedule');
   const [heroOptionsList, setHeroOptionsList] = useState<HeroShowcaseOption[]>(
     heroOptions && heroOptions.length >= 3 ? heroOptions : INITIAL_HERO_OPTIONS
   );
@@ -92,6 +101,44 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Course Modals & Actions
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+
+  // Breakdown Modals & Actions
+  const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
+  const [breakdownToEdit, setBreakdownToEdit] = useState<YouTubeBreakdown | null>(null);
+
+  const handleSaveBreakdown = async (savedBreakdown: YouTubeBreakdown) => {
+    soundFx.playClick();
+    if (youtubeBreakdowns && onUpdateYoutubeBreakdowns) {
+      let updatedList = [...youtubeBreakdowns];
+      const existingIdx = updatedList.findIndex(b => b.id === savedBreakdown.id);
+      if (existingIdx >= 0) {
+        updatedList[existingIdx] = savedBreakdown;
+      } else {
+        updatedList.push(savedBreakdown);
+      }
+      onUpdateYoutubeBreakdowns(updatedList);
+      
+      // Save to cloud
+      await DbService.saveYouTubeBreakdownToDb(savedBreakdown);
+      
+      // Re-fetch
+      const liveData = await DbService.getYouTubeBreakdowns();
+      if (liveData && liveData.length > 0) {
+        onUpdateYoutubeBreakdowns(liveData);
+      }
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+    }
+  };
+
+  const handleDeleteBreakdown = async (id: string) => {
+    if (window.confirm("Are you sure you want to delete this breakdown?")) {
+      soundFx.playPop();
+      if (youtubeBreakdowns && onUpdateYoutubeBreakdowns) {
+        onUpdateYoutubeBreakdowns(youtubeBreakdowns.filter(b => b.id !== id));
+        await DbService.deleteYouTubeBreakdownFromDb(id);
+      }
+    }
+  };
 
   const handleSaveCourse = async (savedCourse: Course) => {
     // 1. Instantly update Local Storage and React State so new course card & batch display immediately
@@ -402,6 +449,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
               { id: 'students', label: 'Student Directory & CRM', icon: Users },
               { id: 'assets', label: 'Asset Vault Catalog', icon: FolderOpen },
               { id: 'hero', label: 'Hero Showcase Options', icon: Tv },
+              { id: 'promos', label: 'Deconstructions & Promos', icon: Tv },
             ].map(tab => {
               const Icon = tab.icon;
               return (
@@ -1022,6 +1070,158 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             </div>
           </div>
         )}
+
+        {/* PROMOS & YOUTUBE BREAKDOWNS TAB */}
+        {activeTab === 'promos' && bundlePromo && onUpdateBundlePromo && (
+          <div className="animate-fade-in space-y-6">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Tv className="w-5 h-5 text-blue-500" />
+                  Deconstructions & Promos
+                </h3>
+                <p className="text-sm text-slate-400">Manage the All-in-one bundle promo displayed in the Asset Vault.</p>
+              </div>
+              <button
+                onClick={async () => {
+                  soundFx.playClick();
+                  // Save Bundle Promo to Turso
+                  if (bundlePromo) {
+                    await DbService.saveBundlePromoToDb(bundlePromo);
+                    alert("Bundle Promo Saved to Database Successfully!");
+                  }
+                }}
+                className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-semibold transition-colors"
+              >
+                <Check className="w-4 h-4" />
+                Save Changes to Cloud
+              </button>
+            </div>
+
+            <div className="bg-[#121522] border border-slate-800 rounded-2xl p-6">
+              <h4 className="text-sm font-bold text-white mb-4 uppercase tracking-wider text-slate-400">Bundle Promo Settings</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Badge Text</label>
+                  <input
+                    type="text"
+                    value={bundlePromo.badgeText}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, badgeText: e.target.value })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-medium transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Title</label>
+                  <input
+                    type="text"
+                    value={bundlePromo.title}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, title: e.target.value })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-medium transition-colors"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Description</label>
+                  <textarea
+                    rows={3}
+                    value={bundlePromo.description}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, description: e.target.value })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-medium transition-colors resize-none"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Current Price (₹)</label>
+                  <input
+                    type="number"
+                    value={bundlePromo.currentPrice}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, currentPrice: Number(e.target.value) })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-mono transition-colors"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Original Price (₹)</label>
+                  <input
+                    type="number"
+                    value={bundlePromo.originalPrice}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, originalPrice: Number(e.target.value) })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-mono transition-colors"
+                  />
+                </div>
+                <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Google Drive Link</label>
+                  <input
+                    type="text"
+                    value={bundlePromo.driveLink}
+                    onChange={e => onUpdateBundlePromo({ ...bundlePromo, driveLink: e.target.value })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-mono transition-colors"
+                  />
+                </div>
+              </div>
+            </div>
+            
+            <div className="bg-[#121522] border border-slate-800 rounded-2xl p-6 mt-6">
+              <div className="flex items-center justify-between mb-4">
+                <h4 className="text-sm font-bold text-white uppercase tracking-wider text-slate-400">YouTube Breakdowns</h4>
+                <button
+                  onClick={() => {
+                    soundFx.playPop();
+                    setBreakdownToEdit(null);
+                    setIsBreakdownModalOpen(true);
+                  }}
+                  className="flex items-center gap-2 px-3 py-1.5 bg-blue-600/20 text-blue-400 hover:bg-blue-600/30 rounded-lg text-xs font-semibold transition-colors"
+                >
+                  <Plus className="w-3.5 h-3.5" />
+                  Add Breakdown
+                </button>
+              </div>
+
+              {(!youtubeBreakdowns || youtubeBreakdowns.length === 0) ? (
+                <div className="text-center p-8 border border-dashed border-slate-700 rounded-xl text-slate-500 text-sm">
+                  No YouTube Breakdowns added yet.
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {youtubeBreakdowns.map(breakdown => (
+                    <div key={breakdown.id} className="bg-[#161a29] border border-slate-700 rounded-xl p-4 flex flex-col md:flex-row gap-4 items-start md:items-center justify-between group">
+                      <div className="flex items-center gap-4">
+                        <div className="w-24 h-14 bg-slate-800 rounded-lg overflow-hidden shrink-0 relative">
+                          <img src={breakdown.thumbnailUrl} alt={breakdown.title} className="w-full h-full object-cover" />
+                        </div>
+                        <div>
+                          <h5 className="font-bold text-white text-sm line-clamp-1">{breakdown.title}</h5>
+                          <div className="flex items-center gap-3 text-xs text-slate-400 mt-1">
+                            <span className="flex items-center gap-1"><Tv className="w-3 h-3" /> {breakdown.views}</span>
+                            <span className="flex items-center gap-1"><Clock className="w-3 h-3" /> {breakdown.duration}</span>
+                            <span className="flex items-center gap-1 text-blue-400 font-semibold">{breakdown.timelineMarkers.length} Markers</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 w-full md:w-auto mt-3 md:mt-0 pt-3 md:pt-0 border-t border-slate-800 md:border-0 justify-end">
+                        <button
+                          onClick={() => {
+                            soundFx.playPop();
+                            setBreakdownToEdit(breakdown);
+                            setIsBreakdownModalOpen(true);
+                          }}
+                          className="p-2 text-slate-400 hover:text-white hover:bg-slate-700 rounded-lg transition-colors"
+                          title="Edit Breakdown"
+                        >
+                          <Edit3 className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={() => handleDeleteBreakdown(breakdown.id)}
+                          className="p-2 text-slate-400 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                          title="Delete Breakdown"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Add / Edit Session Modal */}
@@ -1077,6 +1277,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
           asset={assetToEdit}
           onClose={() => setAssetToEdit(null)}
           onSave={handleSaveAsset}
+        />
+      )}
+
+      {/* Add / Edit Breakdown Modal */}
+      {isBreakdownModalOpen && (
+        <AddEditBreakdownModal
+          isOpen={isBreakdownModalOpen}
+          breakdownToEdit={breakdownToEdit}
+          onClose={() => {
+            setIsBreakdownModalOpen(false);
+            setBreakdownToEdit(null);
+          }}
+          onSave={handleSaveBreakdown}
         />
       )}
     </div>
