@@ -78,17 +78,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       return;
     }
 
-    // 2. Fallback check to DbService / Local seeded credentials
-    const dbUser = await DbService.authenticateUser(cleanEmail, cleanPass);
-    if (dbUser) {
-      soundFx.playPop();
-      StorageService.setCurrentUser(dbUser);
-      onLoginSuccess(dbUser, dbUser.role === 'admin' ? 'admin-console' : 'home');
-      setIsLoading(false);
-      onClose();
-      return;
-    }
-
+    // Only backend API is allowed to authenticate
     setIsLoading(false);
     setErrorMsg(apiRes.message || 'Invalid email or password. Please check your credentials.');
   };

@@ -324,8 +324,9 @@ export class StorageService {
     }
   }
 
-  static enrollUserInCourse(courseId: string, batchName: string = 'September 2026 Live Cohort'): UserProfile {
-    const current = this.getCurrentUser() || DEFAULT_STUDENT_USER;
+  static enrollUserInCourse(courseId: string, batchName: string = 'September 2026 Live Cohort'): UserProfile | null {
+    const current = this.getCurrentUser();
+    if (!current) return;
     const course = COURSES_CATALOG.find(c => c.id === courseId) || COURSES_CATALOG[0];
 
     const alreadyEnrolled = current.enrolledCourses?.some(c => c.courseId === courseId);

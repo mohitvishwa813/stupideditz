@@ -19,6 +19,7 @@ import {
   RefreshCw
 } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
+import { loadRazorpay } from '../../utils/loadRazorpay';
 import confetti from 'canvas-confetti';
 
 interface EnrollModalProps {
@@ -198,7 +199,7 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
   };
 
   // Complete Enrollment & Razorpay Payment Proceed
-  const handleCompleteEnrollment = (e: React.FormEvent) => {
+  const handleCompleteEnrollment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!currentUser) {
       setAuthError('Please Sign In or Register above to enable payment.');
@@ -208,16 +209,111 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
     soundFx.playWhoosh();
     setIsProcessing(true);
 
-    setTimeout(() => {
+    try {
+      // 1. Load Razorpay script
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // 2. Create Order on Backend
+      const orderRes = await ApiService.createPaymentOrder(finalPrice, 'course', course.id, currentUser.id);
+      
+      if (!orderRes.success || !orderRes.orderId) {
+        alert('Failed to initialize secure checkout. Please try again.');
+        setIsProcessing(false);
+        return;
+      }
+
+      // 3. Initialize Razorpay Checkout
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || '', // We will use env var or placeholder if missing
+        amount: orderRes.amount,
+        currency: orderRes.currency,
+        name: 'Stupid Editz Studio',
+        description: `Enroll in ${course.title}`,
+        image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80', // Logo
+        order_id: orderRes.orderId,
+        handler: async function (response: any) {
+          // 4. Verify Signature on Backend
+          try {
+            const verification = await ApiService.verifyPaymentSignature({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: currentUser.id
+            });
+
+            if (verification.success) {
+              soundFx.playPop();
+              confetti({
+                particleCount: 140,
+                spread: 90,
+                origin: { y: 0.5 },
+              });
+              onEnrollSuccess(selectedBatch, 'pro');
+              onClose();
+            } else {
+              alert('Payment verification failed. If money was deducted, it will be refunded in 3-5 days.');
+            }
+          } catch (error) {
+            console.error('Verification failed', error);
+            alert('An error occurred during payment verification.');
+          } finally {
+            setIsProcessing(false);
+          }
+        },
+        prefill: {
+          name: currentUser.name,
+          email: currentUser.email,
+          contact: currentUser.phone || ''
+        },
+        readonly: {
+          email: true,
+          contact: true
+        },
+        theme: {
+          color: '#2563EB' // blue-600
+        },
+        config: {
+          display: {
+            blocks: {
+              upi: {
+                name: "Pay using UPI",
+                instruments: [
+                  { method: "upi" }
+                ]
+              },
+              card: {
+                name: "Pay using Card",
+                instruments: [
+                  { method: "card" }
+                ]
+              }
+            },
+            sequence: ["block.upi", "block.card"],
+            preferences: {
+              show_default_blocks: false
+            }
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessing(false);
+          }
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+    } catch (err) {
+      console.error('Payment initialization error:', err);
+      alert('Could not connect to payment gateway.');
       setIsProcessing(false);
-      confetti({
-        particleCount: 140,
-        spread: 90,
-        origin: { y: 0.5 },
-      });
-      onEnrollSuccess(selectedBatch, 'pro');
-      onClose();
-    }, 1200);
+    }
   };
 
   return (

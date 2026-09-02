@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
 import confetti from 'canvas-confetti';
+import { loadRazorpay } from '../utils/loadRazorpay';
+import { ApiService } from '../services/apiService';
 
 interface AssetVaultSectionProps {
   assets: VideoAsset[];
@@ -38,9 +40,125 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
 }) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isProcessingBundle, setIsProcessingBundle] = useState(false);
+
+  const hasPurchasedBundle = bundlePromo ? currentUser?.purchasedAssets?.includes(bundlePromo.id) : false;
+
+  const handlePurchaseBundle = async () => {
+    if (!currentUser) {
+      soundFx.playGlitch();
+      if (onOpenLoginModal) onOpenLoginModal();
+      return;
+    }
+    if (!bundlePromo) return;
+
+    if (hasPurchasedBundle) {
+      soundFx.playPop();
+      confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+      window.open(bundlePromo.driveLink, '_blank');
+      return;
+    }
+
+    soundFx.playWhoosh();
+    setIsProcessingBundle(true);
+
+    try {
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        alert('Failed to load Razorpay SDK. Please check your internet connection.');
+        setIsProcessingBundle(false);
+        return;
+      }
+
+      const orderRes = await ApiService.createPaymentOrder(bundlePromo.currentPrice, 'bundle', bundlePromo.id, currentUser.id);
+      
+      if (!orderRes.success || !orderRes.orderId) {
+        alert('Failed to initialize secure checkout. Please try again.');
+        setIsProcessingBundle(false);
+        return;
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
+        amount: orderRes.amount,
+        currency: orderRes.currency,
+        name: 'Stupid Editz Studio',
+        description: `Purchase ${bundlePromo.title}`,
+        image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+        order_id: orderRes.orderId,
+        handler: async function (response: any) {
+          try {
+            const verification = await ApiService.verifyPaymentSignature({
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_signature: response.razorpay_signature,
+              userId: currentUser.id
+            });
+
+            if (verification.success) {
+              soundFx.playPop();
+              confetti({ particleCount: 140, spread: 90, origin: { y: 0.5 } });
+              
+              // Update local storage so UI reflects immediately
+              if (currentUser) {
+                const updatedUser = { ...currentUser, purchasedAssets: [...(currentUser.purchasedAssets || []), bundlePromo.id] };
+                import('../services/storageService').then(m => m.StorageService.setCurrentUser(updatedUser));
+                // Note: In a real app we'd dispatch an event or use context to trigger re-render of layout
+                window.location.reload(); // Quickest way to force refresh of the whole app state
+              }
+
+              // Direct them to the bundle download drive link on success
+              window.open(bundlePromo.driveLink, '_blank');
+            } else {
+              alert('Payment verification failed. If money was deducted, it will be refunded.');
+            }
+          } catch (error) {
+            console.error('Verification failed', error);
+            alert('An error occurred during payment verification.');
+          } finally {
+            setIsProcessingBundle(false);
+          }
+        },
+        prefill: {
+          name: currentUser.name,
+          email: currentUser.email,
+          contact: currentUser.phone || ''
+        },
+        readonly: {
+          email: true,
+          contact: true
+        },
+        theme: { color: '#2563EB' },
+        config: {
+          display: {
+            blocks: {
+              upi: { name: "Pay using UPI", instruments: [{ method: "upi" }] },
+              card: { name: "Pay using Card", instruments: [{ method: "card" }] }
+            },
+            sequence: ["block.upi", "block.card"],
+            preferences: { show_default_blocks: false }
+          }
+        },
+        modal: {
+          ondismiss: function() {
+            setIsProcessingBundle(false);
+          }
+        }
+      };
+
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+
+    } catch (err) {
+      console.error('Payment initialization error:', err);
+      alert('Could not connect to payment gateway.');
+      setIsProcessingBundle(false);
+    }
+  };
   const [playingAssetId, setPlayingAssetId] = useState<string | null>(null);
   const [downloadingId, setDownloadingId] = useState<string | null>(null);
   const [downloadSuccessId, setDownloadSuccessId] = useState<string | null>(null);
+  const [isProcessingAssetId, setIsProcessingAssetId] = useState<string | null>(null);
 
   const categories = ['All', 'Free Samples', 'SFX', 'LUTs', 'Fusion Nodes', 'Titles', 'Sound Samples', 'Project Files'];
 
@@ -68,35 +186,130 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
     }, 900);
   };
 
-  const handleDownload = (asset: VideoAsset) => {
+  const handleDownload = async (asset: VideoAsset) => {
     if (!currentUser) {
       soundFx.playGlitch();
-      if (onOpenLoginModal) {
-        onOpenLoginModal();
-      }
+      if (onOpenLoginModal) onOpenLoginModal();
       return;
     }
 
-    soundFx.playPop();
-    setDownloadingId(asset.id);
-    setTimeout(() => {
-      setDownloadingId(null);
-      setDownloadSuccessId(asset.id);
-      confetti({
-        particleCount: 50,
-        spread: 60,
-        origin: { y: 0.7 },
-        colors: ['#3b82f6', '#10b981', '#60a5fa']
-      });
+    const isAlreadyPurchased = hasPurchasedBundle || currentUser.purchasedAssets?.includes(asset.id);
 
-      if (asset.downloadUrl) {
-        window.open(asset.downloadUrl, '_blank');
+    if (!asset.isFreeSample && asset.price > 0 && !isAlreadyPurchased) {
+      soundFx.playWhoosh();
+      setIsProcessingAssetId(asset.id);
+
+      try {
+        const isLoaded = await loadRazorpay();
+        if (!isLoaded) {
+          alert('Failed to load Razorpay SDK. Please check your internet connection.');
+          setIsProcessingAssetId(null);
+          return;
+        }
+
+        const orderRes = await ApiService.createPaymentOrder(asset.price, 'asset', asset.id, currentUser.id);
+        
+        if (!orderRes.success || !orderRes.orderId) {
+          alert('Failed to initialize secure checkout. Please try again.');
+          setIsProcessingAssetId(null);
+          return;
+        }
+
+        const options = {
+          key: import.meta.env.VITE_RAZORPAY_KEY_ID || '',
+          amount: orderRes.amount,
+          currency: orderRes.currency,
+          name: 'Stupid Editz Studio',
+          description: `Purchase ${asset.title}`,
+          image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
+          order_id: orderRes.orderId,
+          handler: async function (response: any) {
+            try {
+              const verification = await ApiService.verifyPaymentSignature({
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+                userId: currentUser.id
+              });
+
+              if (verification.success) {
+                soundFx.playPop();
+                setDownloadSuccessId(asset.id);
+                confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 }, colors: ['#3b82f6', '#10b981', '#60a5fa'] });
+                
+                if (currentUser) {
+                  const updatedUser = { ...currentUser, purchasedAssets: [...(currentUser.purchasedAssets || []), asset.id] };
+                  import('../services/storageService').then(m => m.StorageService.setCurrentUser(updatedUser));
+                  window.location.reload(); 
+                }
+
+                if (asset.downloadUrl) window.open(asset.downloadUrl, '_blank');
+                setTimeout(() => setDownloadSuccessId(null), 3000);
+              } else {
+                alert('Payment verification failed.');
+              }
+            } catch (error) {
+              console.error('Verification failed', error);
+              alert('An error occurred during payment verification.');
+            } finally {
+              setIsProcessingAssetId(null);
+            }
+          },
+          prefill: {
+            name: currentUser.name,
+            email: currentUser.email,
+            contact: currentUser.phone || ''
+          },
+          readonly: { email: true, contact: true },
+          theme: { color: '#2563EB' },
+          config: {
+            display: {
+              blocks: {
+                upi: { name: "Pay using UPI", instruments: [{ method: "upi" }] },
+                card: { name: "Pay using Card", instruments: [{ method: "card" }] }
+              },
+              sequence: ["block.upi", "block.card"],
+              preferences: { show_default_blocks: false }
+            }
+          },
+          modal: {
+            ondismiss: function() {
+              setIsProcessingAssetId(null);
+            }
+          }
+        };
+
+        const paymentObject = new window.Razorpay(options);
+        paymentObject.open();
+
+      } catch (err) {
+        console.error('Payment initialization error:', err);
+        alert('Could not connect to payment gateway.');
+        setIsProcessingAssetId(null);
       }
-
+    } else {
+      // Free download
+      soundFx.playPop();
+      setDownloadingId(asset.id);
       setTimeout(() => {
-        setDownloadSuccessId(null);
-      }, 3000);
-    }, 800);
+        setDownloadingId(null);
+        setDownloadSuccessId(asset.id);
+        confetti({
+          particleCount: 50,
+          spread: 60,
+          origin: { y: 0.7 },
+          colors: ['#3b82f6', '#10b981', '#60a5fa']
+        });
+
+        if (asset.downloadUrl) {
+          window.open(asset.downloadUrl, '_blank');
+        }
+
+        setTimeout(() => {
+          setDownloadSuccessId(null);
+        }, 3000);
+      }, 800);
+    }
   };
 
   const getCategoryIcon = (category: AssetCategory) => {
@@ -191,26 +404,26 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
                 <span className="text-sm text-slate-500 line-through">₹{bundlePromo.originalPrice}</span>
               </div>
               <button 
-                onClick={() => {
-                  if (!currentUser) {
-                    soundFx.playGlitch();
-                    if (onOpenLoginModal) {
-                      onOpenLoginModal();
-                    }
-                    return;
-                  }
-                  soundFx.playPop();
-                  window.open(bundlePromo.driveLink, '_blank');
-                  confetti({
-                    particleCount: 100,
-                    spread: 70,
-                    origin: { y: 0.6 }
-                  });
-                }}
-              className="px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2"
+                onClick={handlePurchaseBundle}
+                disabled={isProcessingBundle}
+              className={`px-8 py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl text-sm font-bold shadow-lg shadow-blue-600/20 transition-all active:scale-95 flex items-center gap-2 ${isProcessingBundle ? 'opacity-70 cursor-not-allowed' : ''}`}
             >
-              <Flame className="w-4 h-4 text-amber-400" />
-              Buy All-In-One Bundle
+              {isProcessingBundle ? (
+                <>
+                  <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  Processing...
+                </>
+              ) : hasPurchasedBundle ? (
+                <>
+                  <Check className="w-4 h-4 text-emerald-400" />
+                  Access Bundle (Purchased)
+                </>
+              ) : (
+                <>
+                  <Flame className="w-4 h-4 text-amber-400" />
+                  Buy All-In-One Bundle
+                </>
+              )}
             </button>
             <p className="text-[10px] text-slate-500">Instant Access via Google Drive</p>
           </div>
@@ -223,6 +436,7 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
             const isPlaying = playingAssetId === asset.id;
             const isDownloading = downloadingId === asset.id;
             const isDownloaded = downloadSuccessId === asset.id;
+            const isAlreadyPurchased = hasPurchasedBundle || currentUser?.purchasedAssets?.includes(asset.id);
 
             return (
               <div
@@ -324,11 +538,11 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
 
                     <button
                       onClick={() => handleDownload(asset)}
-                      disabled={isDownloading}
+                      disabled={isDownloading || isProcessingAssetId === asset.id}
                       className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold transition-all ${
                         isDownloaded
                           ? 'bg-emerald-500 text-slate-950 font-bold'
-                          : isDownloading
+                          : isDownloading || isProcessingAssetId === asset.id
                           ? 'bg-slate-700 text-slate-300 cursor-wait'
                           : asset.isFreeSample
                           ? 'bg-emerald-500/15 hover:bg-emerald-500 text-emerald-400 hover:text-slate-950 border border-emerald-500/40'
@@ -339,17 +553,22 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
                       {isDownloaded ? (
                         <>
                           <Check className="w-3.5 h-3.5" />
-                          <span>Downloaded!</span>
+                          <span>Got it!</span>
                         </>
-                      ) : isDownloading ? (
+                      ) : isDownloading || isProcessingAssetId === asset.id ? (
                         <>
-                          <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                          <span>Preparing...</span>
+                          <ArrowDownToLine className="w-3.5 h-3.5 animate-bounce" />
+                          <span>Processing...</span>
+                        </>
+                      ) : isAlreadyPurchased ? (
+                        <>
+                          <Check className="w-3.5 h-3.5 text-emerald-400" />
+                          <span className="text-emerald-400">Purchased</span>
                         </>
                       ) : (
                         <>
-                          <ArrowDownToLine className="w-3.5 h-3.5" />
-                          <span>{asset.isFreeSample ? 'Free Download' : 'Get Pack'}</span>
+                          <Download className="w-3.5 h-3.5" />
+                          <span>{asset.isFreeSample ? 'Free Sample' : 'Get Pack'}</span>
                         </>
                       )}
                     </button>

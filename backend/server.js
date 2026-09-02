@@ -5,6 +5,7 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 import { initDbSchema } from './db.js';
 import authRoutes from './routes/auth.js';
+import paymentRoutes from './routes/payment.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -18,7 +19,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: '*',
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'x-razorpay-signature'],
 }));
 
 app.use(express.json());
@@ -28,6 +29,7 @@ initDbSchema();
 
 // Mount Routes
 app.use('/api/auth', authRoutes);
+app.use('/api/payment', paymentRoutes);
 
 // Root & Health Check Endpoints
 app.get('/', (req, res) => {

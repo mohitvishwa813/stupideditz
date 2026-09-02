@@ -150,6 +150,16 @@ router.post('/verify-otp-register', async (req, res) => {
     const userId = 'usr-' + Date.now();
     const avatarUrl = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80';
 
+    // Strict Check: Check if email already registered in Turso DB before inserting
+    const existing = await db.execute({
+      sql: `SELECT id FROM users WHERE LOWER(email) = ?`,
+      args: [cleanEmail]
+    });
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ success: false, message: 'This email is already registered. Please sign in instead.' });
+    }
+
     // Insert user into Turso Cloud Database
     await db.execute({
       sql: `INSERT INTO users (id, email, password_hash, full_name, phone, avatar_url, role, status)
@@ -165,10 +175,12 @@ router.post('/verify-otp-register', async (req, res) => {
       name: fullName.trim(),
       email: cleanEmail,
       role: 'student',
-      avatar: avatarUrl,
+      avatar: String(avatarUrl),
       isEnrolled: false,
       enrolledBatch: '',
-      enrolledCourses: []
+      enrolledCourses: [],
+      purchasedAssets: [],
+      orderHistory: []
     };
 
     console.log(`✅ [Backend Auth] Student registered successfully: ${fullName} (${cleanEmail})`);
@@ -200,42 +212,11 @@ router.post('/login', async (req, res) => {
 
     // Query Turso Cloud DB for user account
     const result = await db.execute({
-      sql: `SELECT id, email, password_hash, full_name, role, avatar_url FROM users WHERE LOWER(email) = ?`,
+      sql: `SELECT id, email, password_hash, full_name, phone, role, avatar_url FROM users WHERE LOWER(email) = ?`,
       args: [cleanEmail]
     });
 
     if (result.rows.length === 0) {
-      // Default seeded user fallback
-      if (cleanEmail === 'admin@gmail.com' && cleanPass === 'Admin@123') {
-        const adminUser = {
-          id: 'usr-admin-default',
-          name: 'Arjun Rajput',
-          email: 'admin@gmail.com',
-          role: 'admin',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80',
-          isEnrolled: true,
-          enrolledBatch: 'September 2026 Live Cohort',
-          enrolledCourses: []
-        };
-        const token = jwt.sign({ id: adminUser.id, role: 'admin' }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-        return res.json({ success: true, token, user: adminUser });
-      }
-
-      if (cleanEmail === 'student@gmail.com' && cleanPass === 'Student@123') {
-        const studentUser = {
-          id: 'usr-student-default',
-          name: 'Rahul Verma',
-          email: 'student@gmail.com',
-          role: 'student',
-          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80',
-          isEnrolled: true,
-          enrolledBatch: 'September 2026 Live Cohort',
-          enrolledCourses: []
-        };
-        const token = jwt.sign({ id: studentUser.id, role: 'student' }, process.env.JWT_SECRET || 'secret', { expiresIn: '7d' });
-        return res.json({ success: true, token, user: studentUser });
-      }
-
       return res.status(401).json({ success: false, message: 'Invalid email or password. Please check your credentials.' });
     }
 
@@ -249,6 +230,26 @@ router.post('/login', async (req, res) => {
     const jwtSecret = process.env.JWT_SECRET || 'stupideditz_secret_key_2026';
     const token = jwt.sign({ id: String(row.id), email: String(row.email), role: String(row.role) }, jwtSecret, { expiresIn: '7d' });
 
+    // Fetch order history for the user
+    const ordersRes = await db.execute({
+      sql: `SELECT id, amount, currency, item_type, item_id, status, created_at FROM payment_orders WHERE user_id = ? ORDER BY created_at DESC`,
+      args: [String(row.id)]
+    });
+
+    const orderHistory = ordersRes.rows.map(o => ({
+      id: String(o.id),
+      amount: Number(o.amount),
+      currency: String(o.currency),
+      itemType: String(o.item_type),
+      itemId: String(o.item_id),
+      status: String(o.status),
+      createdAt: String(o.created_at)
+    }));
+
+    const purchasedAssets = orderHistory
+      .filter(o => o.status === 'paid' && (o.itemType === 'asset' || o.itemType === 'bundle'))
+      .map(o => o.itemId);
+
     const userProfile = {
       id: String(row.id),
       name: String(row.full_name),
@@ -257,7 +258,9 @@ router.post('/login', async (req, res) => {
       avatar: String(row.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'),
       isEnrolled: false,
       enrolledBatch: '',
-      enrolledCourses: []
+      enrolledCourses: [],
+      purchasedAssets,
+      orderHistory
     };
 
     return res.json({

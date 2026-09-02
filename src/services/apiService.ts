@@ -88,4 +88,38 @@ export class ApiService {
       return { success: false, message: 'Server connection error during password reset.' };
     }
   }
+
+  // ----------------------------------------------------------------------
+  // PAYMENT INTEGRATION (RAZORPAY)
+  // ----------------------------------------------------------------------
+  
+  static async createPaymentOrder(amount: number, itemType: string, itemId: string, userId: string): Promise<{ success: boolean; orderId?: string; amount?: number; currency?: string; message?: string }> {
+    try {
+      const paymentBaseUrl = API_BASE_URL.replace('/auth', '');
+      const res = await fetch(`${paymentBaseUrl}/payment/create-order`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount, itemType, itemId, userId }),
+      });
+      return await res.json();
+    } catch (err) {
+      console.error('ApiService.createPaymentOrder error:', err);
+      return { success: false, message: 'Server connection error during payment initialization.' };
+    }
+  }
+
+  static async verifyPaymentSignature(paymentData: { razorpay_order_id: string; razorpay_payment_id: string; razorpay_signature: string; userId: string }): Promise<{ success: boolean; message: string }> {
+    try {
+      const paymentBaseUrl = API_BASE_URL.replace('/auth', '');
+      const res = await fetch(`${paymentBaseUrl}/payment/verify-signature`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(paymentData),
+      });
+      return await res.json();
+    } catch (err) {
+      console.error('ApiService.verifyPaymentSignature error:', err);
+      return { success: false, message: 'Server connection error during payment verification.' };
+    }
+  }
 }

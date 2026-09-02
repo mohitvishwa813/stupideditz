@@ -850,19 +850,7 @@ export class DbService {
       console.warn('Turso DB user auth query failed, using fallback:', err);
     }
 
-    // Direct fallback check for default credentials
-    if (emailInput.trim().toLowerCase() === 'admin@gmail.com') {
-      return {
-        ...DEFAULT_ADMIN_USER,
-        email: 'admin@gmail.com'
-      };
-    }
-    if (emailInput.trim().toLowerCase() === 'student@gmail.com') {
-      return {
-        ...DEFAULT_STUDENT_USER,
-        email: 'student@gmail.com'
-      };
-    }
+    // Fallback removed to enforce strict backend authentication
 
     return null;
   }

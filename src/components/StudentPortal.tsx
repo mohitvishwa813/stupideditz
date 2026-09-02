@@ -43,6 +43,7 @@ import { SessionRatingModal } from './modals/SessionRatingModal';
 import { RecordingModal } from './modals/RecordingModal';
 import { MockTestModal } from './modals/MockTestModal';
 import { AskQuestionModal } from './modals/AskQuestionModal';
+import { INITIAL_ASSETS, INITIAL_BUNDLE_PROMO } from '../data/initialData';
 
 import { Receipt, Settings, User, Phone, Mail, Lock, CreditCard } from 'lucide-react';
 import { StorageService } from '../services/storageService';
@@ -854,7 +855,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         {/* ============================================================ */}
         {activeTab === 'assets' && (
           <div className="space-y-6 animate-fadeIn" id="vault-view">
-            {!isUserEnrolled ? (
+            {(!currentUser.purchasedAssets || currentUser.purchasedAssets.length === 0) ? (
               <div className="bg-[#101424] border border-slate-800/80 rounded-3xl p-8 text-center max-w-2xl mx-auto my-12 space-y-4 shadow-2xl relative overflow-hidden">
                 <div className="w-16 h-16 rounded-2xl bg-emerald-500/15 border border-emerald-500/30 flex items-center justify-center text-emerald-400 mx-auto shadow-inner">
                   <FolderLock className="w-8 h-8" />
@@ -891,60 +892,65 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 </div>
               </div>
             ) : (
-              <>
-                <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
-                  <div>
-                    <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
-                      VIP STUDENT LOCKER
-                    </span>
-                    <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
-                      40GB+ Masterclass Production Vault
-                    </h2>
-                    <p className="text-xs sm:text-sm text-slate-400 mt-1">
-                      Download all licensed sound design assets, 3D LUTs, DaVinci Fusion macros, and project timelines.
-                    </p>
+              <div className="space-y-6">
+                {currentUser.purchasedAssets.includes(INITIAL_BUNDLE_PROMO.id) && (
+                  <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
+                    <div>
+                      <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
+                        VIP STUDENT LOCKER
+                      </span>
+                      <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
+                        {INITIAL_BUNDLE_PROMO.title}
+                      </h2>
+                      <p className="text-xs sm:text-sm text-slate-400 mt-1">
+                        Download all licensed sound design assets, 3D LUTs, DaVinci Fusion macros, and project timelines.
+                      </p>
+                    </div>
+
+                    <a
+                      href={INITIAL_BUNDLE_PROMO.driveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center gap-2 transition-colors border border-blue-500/50"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Access Bundle Drive</span>
+                    </a>
                   </div>
+                )}
 
-                  <a
-                    href="https://drive.google.com/drive/folders/stupideditz-vip-vault"
-                    target="_blank"
-                    rel="noreferrer"
-                    className="px-5 py-3 rounded-xl bg-gradient-to-r from-[#00e5a3] to-[#00b884] hover:from-[#00b884] hover:to-[#00966d] text-slate-950 font-black text-xs flex items-center gap-2 shadow-lg shadow-[#00e5a3]/20"
-                  >
-                    <Download className="w-4 h-4" />
-                    <span>Download Entire 40GB ZIP Archive</span>
-                  </a>
-                </div>
-
-                {/* Asset Categories Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                  {[
-                    { title: 'Sound Effects (SFX)', size: '14.2 GB', format: '24-bit 48kHz WAV', count: '1,250+ Sounds', icon: Volume2, color: 'text-amber-400' },
-                    { title: 'Cinematic 3D LUTs', size: '2.8 GB', format: '.cube (Rec.709 & Log)', count: '45 LUT Packs', icon: Sliders, color: 'text-[#ff7043]' },
-                    { title: 'Fusion .drfx Macros', size: '6.4 GB', format: 'Titles, Callouts, Maps', count: '80+ Templates', icon: Layers, color: 'text-[#00e5a3]' },
-                    { title: '4K Film Grains & Overlays', size: '18.1 GB', format: 'ProRes 422 4K', count: '35 Overlays', icon: Film, color: 'text-purple-400' },
-                  ].map((pack, idx) => (
-                    <div key={idx} className="bg-[#121627] border border-slate-800 rounded-2xl p-5 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <pack.icon className={`w-5 h-5 ${pack.color}`} />
-                        <span className="text-[11px] font-mono text-slate-400">{pack.size}</span>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {INITIAL_ASSETS.filter(a => currentUser.purchasedAssets?.includes(a.id)).map((asset) => (
+                    <div key={asset.id} className="bg-[#121627] border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between">
+                      <div className="relative aspect-video">
+                        <img src={asset.thumbnail} alt={asset.title} className="w-full h-full object-cover" />
+                        <div className="absolute top-2 left-2 px-2 py-1 bg-black/60 backdrop-blur-md rounded-lg border border-white/10 flex items-center gap-1.5 text-[10px] font-bold text-white">
+                          <FolderLock className="w-3 h-3 text-blue-400" />
+                          {asset.category}
+                        </div>
                       </div>
-                      <h4 className="text-sm font-bold text-white">{pack.title}</h4>
-                      <div className="text-xs text-slate-400 space-y-1">
-                        <div>Format: <span className="text-slate-300 font-mono">{pack.format}</span></div>
-                        <div>Includes: <span className="text-slate-300">{pack.count}</span></div>
+                      <div className="p-5 flex-1 flex flex-col justify-between">
+                        <div>
+                          <h3 className="text-sm font-bold text-white">{asset.title}</h3>
+                          <p className="text-xs text-slate-400 mt-2 line-clamp-2">{asset.description}</p>
+                        </div>
+                        <div className="pt-4 mt-4 border-t border-slate-800 flex justify-between items-center">
+                          <span className="text-[10px] text-slate-500 font-mono">{asset.fileSize} • {asset.format}</span>
+                          <a
+                            href={asset.downloadUrl || '#'}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-4 py-2 bg-blue-600 hover:bg-blue-500 text-white rounded-lg text-xs font-bold transition-colors flex items-center gap-1.5"
+                          >
+                            <Download className="w-3.5 h-3.5" />
+                            Download
+                          </a>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => soundFx.playPop()}
-                        className="w-full py-2 bg-[#181e33] hover:bg-[#222b49] text-xs font-bold text-slate-200 rounded-xl transition-colors border border-slate-700 flex items-center justify-center gap-1.5"
-                      >
-                        <Download className="w-3.5 h-3.5" />
-                        <span>Download Pack</span>
-                      </button>
                     </div>
                   ))}
                 </div>
-              </>
+              </div>
             )}
           </div>
         )}
@@ -997,7 +1003,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </p>
             </div>
 
-            {(!isUserEnrolled) ? (
+            {(!currentUser.orderHistory || currentUser.orderHistory.length === 0) ? (
               <div className="bg-[#121627] border border-slate-800 rounded-3xl p-8 text-center space-y-3">
                 <div className="w-12 h-12 rounded-2xl bg-slate-800/80 flex items-center justify-center text-slate-400 mx-auto">
                   <CreditCard className="w-6 h-6" />
@@ -1009,62 +1015,40 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             ) : (
               <div className="space-y-4">
-                {[
-                  {
-                    id: 'ORD-RZP-892401',
-                    title: 'DaVinci Resolve 19: High-Retention Masterclass',
-                    type: 'Course Cohort',
-                    batch: currentUser.enrolledBatch || 'September 2026 Live Cohort',
-                    amount: '₹4,999',
-                    date: '10 Sep 2026',
-                    paymentMethod: 'Razorpay UPI (GPay)',
-                    paymentId: 'pay_P89201948201',
-                    status: 'SUCCESSFUL'
-                  },
-                  {
-                    id: 'ORD-RZP-781920',
-                    title: 'Creator Production Asset Vault (40GB)',
-                    type: 'Asset Pack Locker',
-                    batch: 'VIP Access',
-                    amount: '₹999',
-                    date: '12 Aug 2026',
-                    paymentMethod: 'Razorpay Card',
-                    paymentId: 'pay_P78192038101',
-                    status: 'SUCCESSFUL'
-                  }
-                ].map(order => (
+                {currentUser.orderHistory.map(order => (
                   <div
                     key={order.id}
                     className="bg-[#121627] border border-slate-800 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
                   >
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
-                          ✓ {order.status}
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-mono font-bold border ${
+                          order.status.toLowerCase() === 'paid' 
+                            ? 'bg-emerald-500/20 text-emerald-400 border-emerald-500/30' 
+                            : 'bg-amber-500/20 text-amber-400 border-amber-500/30'
+                        }`}>
+                          {order.status.toLowerCase() === 'paid' ? '✓ SUCCESSFUL' : order.status.toUpperCase()}
                         </span>
                         <span className="text-xs text-slate-400 font-mono">{order.id}</span>
                       </div>
 
-                      <h4 className="text-sm font-bold text-white">{order.title}</h4>
+                      <h4 className="text-sm font-bold text-white">
+                        {order.itemType === 'bundle' 
+                          ? INITIAL_BUNDLE_PROMO.title 
+                          : order.itemType === 'asset' 
+                            ? INITIAL_ASSETS.find(a => a.id === order.itemId)?.title || 'Digital Asset'
+                            : 'Masterclass Course'}
+                      </h4>
                       
                       <div className="text-xs text-slate-400 font-mono space-x-3">
-                        <span>Date: <strong className="text-slate-200">{order.date}</strong></span>
-                        <span>•</span>
-                        <span>Payment ID: <strong className="text-slate-200">{order.paymentId}</strong></span>
+                        <span>Date: <strong className="text-slate-200">{new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</strong></span>
                       </div>
                     </div>
 
                     <div className="flex sm:flex-col items-center sm:items-end justify-between gap-2 shrink-0 border-t sm:border-t-0 pt-2 sm:pt-0 border-slate-800">
                       <div className="text-base font-black text-emerald-400 font-mono">
-                        {order.amount}
+                        {order.currency} {order.amount}
                       </div>
-                      <button
-                        onClick={() => soundFx.playPop()}
-                        className="px-3.5 py-1.5 rounded-xl bg-[#181e33] hover:bg-[#222b49] text-xs font-semibold text-slate-200 flex items-center gap-1.5 transition-colors border border-slate-700"
-                      >
-                        <Download className="w-3.5 h-3.5 text-blue-400" />
-                        <span>Download Receipt</span>
-                      </button>
                     </div>
                   </div>
                 ))}

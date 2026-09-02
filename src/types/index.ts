@@ -162,15 +162,28 @@ export interface Course {
   isPopular?: boolean;
 }
 
+export interface PaymentOrder {
+  id: string;
+  amount: number;
+  currency: string;
+  itemType: string;
+  itemId: string;
+  status: string;
+  createdAt: string;
+}
+
 export interface UserProfile {
   id: string;
   name: string;
   email: string;
+  phone?: string;
   role: 'student' | 'admin' | 'guest';
   avatar: string;
   isEnrolled: boolean;
-  enrolledBatch: string;
-  enrolledCourses: EnrolledCourseInfo[];
+  enrolledBatch?: string;
+  enrolledCourses?: EnrolledCourseInfo[];
+  purchasedAssets?: string[];
+  orderHistory?: PaymentOrder[];
 }
 
 export interface HeroShowcaseOption {

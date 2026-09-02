@@ -44,6 +44,34 @@ export async function initDbSchema() {
       // Column may already exist
     }
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS payment_orders (
+        id TEXT PRIMARY KEY,
+        user_id TEXT NOT NULL,
+        razorpay_order_id TEXT NOT NULL,
+        amount INTEGER NOT NULL,
+        currency TEXT NOT NULL,
+        status TEXT DEFAULT 'created',
+        item_type TEXT,
+        item_id TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS payment_logs (
+        id TEXT PRIMARY KEY,
+        order_id TEXT,
+        razorpay_payment_id TEXT,
+        razorpay_signature TEXT,
+        status TEXT,
+        method TEXT,
+        amount INTEGER,
+        event_type TEXT,
+        created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+      )
+    `);
+
     console.log('⚡ [Backend DB] Turso Cloud DB connection & users table initialized successfully!');
   } catch (err) {
     console.error('❌ [Backend DB] Table initialization error:', err);
