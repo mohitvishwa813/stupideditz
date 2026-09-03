@@ -16,7 +16,9 @@ import {
   ShieldCheck, 
   Sparkles,
   ArrowRight,
-  RefreshCw
+  RefreshCw,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
 import { loadRazorpay } from '../../utils/loadRazorpay';
@@ -57,6 +59,9 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
   const [loginPassword, setLoginPassword] = useState('');
   const [authLoading, setAuthLoading] = useState(false);
   const [authError, setAuthError] = useState('');
+  
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
 
   // Register Form State
   const [regName, setRegName] = useState('');
@@ -253,8 +258,32 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
                 spread: 90,
                 origin: { y: 0.5 },
               });
-              onEnrollSuccess(selectedBatch, 'pro');
-              onClose();
+              
+              if (currentUser) {
+                const newOrder = {
+                  id: response.razorpay_order_id,
+                  amount: orderRes.amount ? orderRes.amount / 100 : finalPrice, // Razorpay amount is in paise
+                  currency: orderRes.currency || 'INR',
+                  itemType: 'course',
+                  itemId: course.id,
+                  status: 'paid',
+                  createdAt: new Date().toISOString()
+                };
+                
+                const currentFromStorage = import('../../services/storageService').then(m => {
+                  const latestUser = m.StorageService.getCurrentUser() || currentUser;
+                  const updatedUser = {
+                    ...latestUser,
+                    orderHistory: [newOrder, ...(latestUser.orderHistory || [])]
+                  };
+                  m.StorageService.setCurrentUser(updatedUser);
+                  onEnrollSuccess(selectedBatch, 'pro');
+                  onClose();
+                });
+              } else {
+                onEnrollSuccess(selectedBatch, 'pro');
+                onClose();
+              }
             } else {
               alert('Payment verification failed. If money was deducted, it will be refunded in 3-5 days.');
             }
@@ -469,13 +498,20 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
                     <div className="relative">
                       <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                       <input
-                        type="password"
+                        type={showLoginPassword ? "text" : "password"}
                         required
                         placeholder="••••••••"
                         value={loginPassword}
                         onChange={e => setLoginPassword(e.target.value)}
-                        className="w-full bg-[#0c0e18] border border-slate-700/80 rounded-xl pl-9 pr-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                        className="w-full bg-[#0c0e18] border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                       />
+                      <button 
+                        type="button" 
+                        onClick={() => setShowLoginPassword(!showLoginPassword)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                      >
+                        {showLoginPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
                     </div>
                   </div>
 
@@ -583,14 +619,24 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
                         <label className="block text-[11px] font-semibold text-slate-300 uppercase font-mono mb-1">
                           Create Password
                         </label>
-                        <input
-                          type="password"
-                          required
-                          placeholder="••••••••"
-                          value={regPassword}
-                          onChange={e => setRegPassword(e.target.value)}
-                          className="w-full bg-[#0c0e18] border border-slate-700/80 rounded-xl px-3 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                        />
+                        <div className="relative">
+                          <Lock className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                          <input
+                            type={showRegPassword ? "text" : "password"}
+                            required
+                            placeholder="••••••••"
+                            value={regPassword}
+                            onChange={e => setRegPassword(e.target.value)}
+                            className="w-full bg-[#0c0e18] border border-slate-700/80 rounded-xl pl-9 pr-8 py-2 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                          />
+                          <button 
+                            type="button" 
+                            onClick={() => setShowRegPassword(!showRegPassword)}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                          >
+                            {showRegPassword ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}

@@ -87,7 +87,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLogin }) => {
               <Mail className="w-3.5 h-3.5" />
               infostupideditz@gmail.com
             </span>
-            <span>DaVinci Resolve 19 Studio Pipeline</span>
+            <span>DaVinci Resolve Studio Pipeline</span>
           </div>
         </div>
       </div>

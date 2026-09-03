@@ -250,15 +250,21 @@ router.post('/login', async (req, res) => {
       .filter(o => o.status === 'paid' && (o.itemType === 'asset' || o.itemType === 'bundle'))
       .map(o => o.itemId);
 
+    const enrolledCourses = orderHistory
+      .filter(o => o.status === 'paid' && o.itemType === 'course')
+      .map(o => o.itemId);
+
+    const isEnrolled = enrolledCourses.length > 0;
+
     const userProfile = {
       id: String(row.id),
       name: String(row.full_name),
       email: String(row.email),
       role: String(row.role) === 'admin' ? 'admin' : 'student',
       avatar: String(row.avatar_url || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'),
-      isEnrolled: false,
-      enrolledBatch: '',
-      enrolledCourses: [],
+      isEnrolled: isEnrolled,
+      enrolledBatch: isEnrolled ? 'September 2026 Cohort' : '',
+      enrolledCourses: enrolledCourses,
       purchasedAssets,
       orderHistory
     };

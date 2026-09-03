@@ -239,37 +239,45 @@ export default function App() {
 
           {/* STUDENT LEARNING HUB & ENROLLED COURSES VIEW */}
           <Route path="/student-portal" element={
-            <StudentPortal
-              sessions={sessions}
-              currentUser={currentUser || DEFAULT_STUDENT_USER}
-              initialTab={studentPortalTab}
-              onLogout={handleLogout}
-              onNavigateToAdmin={() => handleNavigate('admin-console')}
-              onNavigateHome={() => handleNavigate('home')}
-              onOpenEnroll={handleOpenEnrollModal}
-              onUpdateUser={(updated) => setCurrentUser(updated)}
-            />
+            currentUser ? (
+              <StudentPortal
+                sessions={sessions}
+                currentUser={currentUser}
+                initialTab={studentPortalTab}
+                onLogout={handleLogout}
+                onNavigateToAdmin={() => handleNavigate('admin-console')}
+                onNavigateHome={() => handleNavigate('home')}
+                onOpenEnroll={handleOpenEnrollModal}
+                onUpdateUser={(updated) => setCurrentUser(updated)}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
           } />
 
           {/* ADMIN STUDIO CONSOLE */}
           <Route path="/admin-console" element={
-            <AdminConsole
-              sessions={sessions}
-              onUpdateSessions={handleUpdateSessions}
-              currentUser={currentUser || DEFAULT_ADMIN_USER}
-              onNavigateToStudentPortal={() => handleNavigate('student-portal', 'enrolled-courses')}
-              onLogout={handleLogout}
-              assets={assets}
-              onUpdateAssets={handleUpdateAssets}
-              courses={courses}
-              onUpdateCourses={handleUpdateCourses}
-              heroOptions={heroOptions}
-              onUpdateHeroOptions={(newHeroOptions) => setHeroOptions(newHeroOptions)}
-              youtubeBreakdowns={youtubeBreakdowns}
-              onUpdateYoutubeBreakdowns={(b) => setYoutubeBreakdowns(b)}
-              bundlePromo={bundlePromo}
-              onUpdateBundlePromo={(p) => setBundlePromo(p)}
-            />
+            currentUser && currentUser.role === 'admin' ? (
+              <AdminConsole
+                sessions={sessions}
+                onUpdateSessions={handleUpdateSessions}
+                currentUser={currentUser}
+                onNavigateToStudentPortal={() => handleNavigate('student-portal', 'enrolled-courses')}
+                onLogout={handleLogout}
+                assets={assets}
+                onUpdateAssets={handleUpdateAssets}
+                courses={courses}
+                onUpdateCourses={handleUpdateCourses}
+                heroOptions={heroOptions}
+                onUpdateHeroOptions={(newHeroOptions) => setHeroOptions(newHeroOptions)}
+                youtubeBreakdowns={youtubeBreakdowns}
+                onUpdateYoutubeBreakdowns={(b) => setYoutubeBreakdowns(b)}
+                bundlePromo={bundlePromo}
+                onUpdateBundlePromo={(p) => setBundlePromo(p)}
+              />
+            ) : (
+              <Navigate to="/" replace />
+            )
           } />
 
           {/* Catch-all Fallback Redirect */}

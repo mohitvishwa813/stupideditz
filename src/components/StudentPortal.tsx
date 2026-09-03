@@ -99,7 +99,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   // Student Local Notes State
   const [studentNotes, setStudentNotes] = useState<string>(() => {
     return localStorage.getItem('stupideditz_student_notes') || 
-`# DaVinci Resolve 19 Masterclass Notes
+`# DaVinci Resolve Masterclass Notes
 - **Cut Page Shortcuts**: 'W' and 'Q' to trim head/tail to playhead without switching tools.
 - **Fusion Nodes**: Connect Background (Clean Plate) -> Merge -> Foreground (Actor Mask).
 - **Color Wheels**: Lift (shadows) -> Gamma (midtones) -> Gain (highlights). Always check Parade Scopes.
@@ -136,7 +136,32 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     currentUser?.isEnrolled && currentUser?.enrolledCourses && currentUser.enrolledCourses.length > 0
   );
 
-  const enrolledCoursesList = isUserEnrolled ? (currentUser.enrolledCourses || []) : [];
+  const enrolledCoursesList = isUserEnrolled ? (
+    (currentUser.enrolledCourses || []).map((course: any) => {
+      if (typeof course === 'string') {
+        const catalog = StorageService.getCourses();
+        const found = catalog.find(c => c.id === course) || catalog[0];
+        if (!found) return null;
+        return {
+          courseId: found.id,
+          courseTitle: found.title,
+          batch: 'September 2026 Live Cohort',
+          enrolledDate: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+          progressPercent: 18,
+          completedDays: 2,
+          totalDays: found.totalDays,
+          nextSessionDay: 'Day 03',
+          nextSessionTopic: 'Cut Page Full Editing + Keyboard Shortcuts',
+          nextSessionTime: 'Upcoming 3:30 PM IST',
+          meetUrl: 'https://meet.google.com/std-edit-live',
+          status: 'Active',
+          thumbnail: found.thumbnail,
+          instructor: found.instructorName
+        };
+      }
+      return course;
+    }).filter(Boolean)
+  ) : [];
 
   // Calculate Progress
   const completedCount = sessions.filter(s => s.status === 'completed').length;
@@ -329,35 +354,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   <span>26-Day Schedule & Lessons</span>
                 </button>
 
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab('doubts');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
-                    activeTab === 'doubts'
-                      ? 'bg-[#ff5722] text-white shadow-xs'
-                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  <HelpCircle className="w-3.5 h-3.5" />
-                  <span>Saturday Doubts & Q&A</span>
-                </button>
 
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab('notes');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
-                    activeTab === 'notes'
-                      ? 'bg-[#ff5722] text-white shadow-xs'
-                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  <FileText className="w-3.5 h-3.5" />
-                  <span>My DaVinci Notes</span>
-                </button>
               </div>
             )}
           </div>
@@ -506,7 +503,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                   </div>
 
                   {/* Actions Grid */}
-                  <div className="mt-6 pt-4 border-t border-slate-800 grid grid-cols-2 gap-2">
+                  <div className="mt-6 pt-4 border-t border-slate-800 grid grid-cols-1 gap-2">
                     <button
                       onClick={() => {
                         soundFx.playClick();
@@ -517,18 +514,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     >
                       <Calendar className="w-3.5 h-3.5 text-[#ff7043]" />
                       <span>Classroom</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        soundFx.playClick();
-                        setActiveTab('doubts');
-                      }}
-                      className="py-2.5 px-3 rounded-xl bg-[#192036] hover:bg-[#222b49] text-amber-300 text-xs font-bold flex items-center justify-center gap-1.5 transition-colors border border-slate-700/80"
-                      id={`enter-doubts-${course.courseId}`}
-                    >
-                      <HelpCircle className="w-3.5 h-3.5" />
-                      <span>Doubts</span>
                     </button>
                   </div>
                 </div>
@@ -616,6 +601,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 const isExpanded = expandedSessionId === session.id;
                 const isDoubt = session.type === 'Doubt Session';
                 const isOff = session.type === 'Off';
+                const isFuture = session.dateIso ? new Date(session.dateIso).setHours(0, 0, 0, 0) > new Date().setHours(0, 0, 0, 0) : false;
 
                 return (
                   <div
@@ -669,36 +655,47 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                       <div className="flex items-center gap-2">
                         {!isOff && session.meetUrl && (
                           <a
-                            href={session.meetUrl}
-                            target="_blank"
+                            href={isFuture ? undefined : session.meetUrl}
+                            target={isFuture ? undefined : "_blank"}
                             rel="noreferrer"
-                            className="px-3 py-1.5 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs"
+                            onClick={(e) => { if (isFuture) e.preventDefault(); }}
+                            className={`px-3 py-1.5 rounded-xl text-white text-xs font-bold flex items-center gap-1.5 transition-colors shadow-xs ${
+                              isFuture ? 'bg-slate-700/50 text-slate-400 cursor-not-allowed border border-slate-700' : 'bg-[#ff5722] hover:bg-[#f4511e]'
+                            }`}
                           >
                             <Video className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Join Live</span>
                           </a>
                         )}
 
-                        {!isOff && session.recordingUrl && (
+                        {!isOff && !isFuture && session.recordingUrl && (
                           <button
                             onClick={() => {
+                              if (isFuture) return;
                               soundFx.playClick();
                               setRecordingSession(session);
                             }}
-                            className="px-3 py-1.5 rounded-xl bg-[#192036] hover:bg-[#222b49] text-[#00e5a3] text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700"
+                            disabled={isFuture}
+                            className={`px-3 py-1.5 rounded-xl text-[#00e5a3] text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700 ${
+                              isFuture ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-[#192036] hover:bg-[#222b49]'
+                            }`}
                           >
                             <Play className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Recording</span>
                           </button>
                         )}
 
-                        {!isOff && (
+                        {!isOff && !isFuture && (
                           <button
                             onClick={() => {
+                              if (isFuture) return;
                               soundFx.playClick();
                               setSubmittingSession(session);
                             }}
-                            className="px-3 py-1.5 rounded-xl bg-[#192036] hover:bg-[#222b49] text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700"
+                            disabled={isFuture}
+                            className={`px-3 py-1.5 rounded-xl text-slate-200 text-xs font-bold flex items-center gap-1.5 transition-colors border border-slate-700 ${
+                              isFuture ? 'bg-slate-800/50 text-slate-500 cursor-not-allowed' : 'bg-[#192036] hover:bg-[#222b49]'
+                            }`}
                           >
                             <FileText className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Homework</span>
@@ -737,10 +734,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           <div className="flex items-center gap-3 text-xs">
                             {session.deckUrl && (
                               <a
-                                href={session.deckUrl}
-                                target="_blank"
+                                href={isFuture ? undefined : session.deckUrl}
+                                target={isFuture ? undefined : "_blank"}
                                 rel="noreferrer"
-                                className="text-blue-400 hover:underline flex items-center gap-1"
+                                onClick={(e) => { if (isFuture) e.preventDefault(); }}
+                                className={`flex items-center gap-1 ${isFuture ? 'text-slate-600 cursor-not-allowed' : 'text-blue-400 hover:underline'}`}
                               >
                                 <ExternalLink className="w-3 h-3" />
                                 Presentation Slides
@@ -748,10 +746,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                             )}
                             {session.filesDriveUrl && (
                               <a
-                                href={session.filesDriveUrl}
-                                target="_blank"
+                                href={isFuture ? undefined : session.filesDriveUrl}
+                                target={isFuture ? undefined : "_blank"}
                                 rel="noreferrer"
-                                className="text-[#00e5a3] hover:underline flex items-center gap-1"
+                                onClick={(e) => { if (isFuture) e.preventDefault(); }}
+                                className={`flex items-center gap-1 ${isFuture ? 'text-slate-600 cursor-not-allowed' : 'text-[#00e5a3] hover:underline'}`}
                               >
                                 <Download className="w-3 h-3" />
                                 Practice Raw Media (.zip)
@@ -760,10 +759,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           </div>
 
                           <button
-                            onClick={() => setRatingSession(session)}
-                            className="text-xs text-amber-400 hover:underline flex items-center gap-1"
+                            onClick={() => {
+                              if (isFuture) return;
+                              setRatingSession(session);
+                            }}
+                            disabled={isFuture}
+                            className={`text-xs flex items-center gap-1 ${isFuture ? 'text-slate-600 cursor-not-allowed' : 'text-amber-400 hover:underline'}`}
                           >
-                            <Star className="w-3.5 h-3.5 fill-amber-400" />
+                            <Star className={`w-3.5 h-3.5 ${isFuture ? 'fill-slate-600' : 'fill-amber-400'}`} />
                             Rate this Class
                           </button>
                         </div>

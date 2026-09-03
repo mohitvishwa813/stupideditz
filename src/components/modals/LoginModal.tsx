@@ -3,7 +3,7 @@ import { UserProfile } from '../../types';
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER } from '../../services/storageService';
 import { DbService } from '../../services/dbService';
 import { ApiService } from '../../services/apiService';
-import { X, ShieldCheck, GraduationCap, Lock, Mail, User, Phone, CheckCircle2, ArrowRight, AlertCircle, KeyRound, Key, RefreshCw, Sparkles } from 'lucide-react';
+import { X, ShieldCheck, GraduationCap, Lock, Mail, User, Phone, CheckCircle2, ArrowRight, AlertCircle, KeyRound, Key, RefreshCw, Sparkles, Eye, EyeOff } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
 import confetti from 'canvas-confetti';
 
@@ -43,6 +43,9 @@ export const LoginModal: React.FC<LoginModalProps> = ({
   const [forgotOtp, setForgotOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [isForgotOtpSent, setIsForgotOtpSent] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showRegPassword, setShowRegPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
 
   // Countdown timer effect for OTP resend
   useEffect(() => {
@@ -71,8 +74,31 @@ export const LoginModal: React.FC<LoginModalProps> = ({
     const apiRes = await ApiService.loginUser(cleanEmail, cleanPass);
     if (apiRes.success && apiRes.user) {
       soundFx.playPop();
-      StorageService.setCurrentUser(apiRes.user);
-      onLoginSuccess(apiRes.user, apiRes.user.role === 'admin' ? 'admin-console' : 'home');
+      let finalUser = { ...apiRes.user };
+      if (finalUser.enrolledCourses && finalUser.enrolledCourses.length > 0 && typeof finalUser.enrolledCourses[0] === 'string') {
+        const catalog = StorageService.getCourses();
+        finalUser.enrolledCourses = finalUser.enrolledCourses.map((id: string) => {
+          const course = catalog.find(c => c.id === id) || catalog[0];
+          return {
+            courseId: course.id,
+            courseTitle: course.title,
+            batch: 'September 2026 Live Cohort',
+            enrolledDate: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+            progressPercent: 18,
+            completedDays: 2,
+            totalDays: course.totalDays,
+            nextSessionDay: 'Day 03',
+            nextSessionTopic: 'Cut Page Full Editing + Keyboard Shortcuts',
+            nextSessionTime: 'Upcoming 3:30 PM IST',
+            meetUrl: 'https://meet.google.com/std-edit-live',
+            status: 'Active',
+            thumbnail: course.thumbnail,
+            instructor: course.instructorName
+          };
+        });
+      }
+      StorageService.setCurrentUser(finalUser);
+      onLoginSuccess(finalUser, finalUser.role === 'admin' ? 'admin-console' : 'home');
       setIsLoading(false);
       onClose();
       return;
@@ -345,14 +371,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   required
                   placeholder="Enter your password"
                   value={password}
                   onChange={e => setPassword(e.target.value)}
-                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
+                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
                   id="login-password-input"
                 />
+                <button 
+                  type="button" 
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                >
+                  {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -464,14 +497,21 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showRegPassword ? "text" : "password"}
                   required
-                  placeholder="Min 6 characters"
+                  placeholder="Minimum 6 characters"
                   value={regPassword}
                   onChange={e => setRegPassword(e.target.value)}
-                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
-                  id="register-password-input"
+                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-10 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-emerald-500"
+                  id="reg-password-input"
                 />
+                <button 
+                  type="button" 
+                  onClick={() => setShowRegPassword(!showRegPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                >
+                  {showRegPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 
@@ -573,13 +613,20 @@ export const LoginModal: React.FC<LoginModalProps> = ({
               <div className="relative">
                 <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
-                  type="password"
+                  type={showNewPassword ? "text" : "password"}
                   required
                   placeholder="Min 6 characters"
                   value={newPassword}
                   onChange={e => setNewPassword(e.target.value)}
-                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-4 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
+                  className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl pl-10 pr-10 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"
                 />
+                <button 
+                  type="button" 
+                  onClick={() => setShowNewPassword(!showNewPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-300"
+                >
+                  {showNewPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
               </div>
             </div>
 

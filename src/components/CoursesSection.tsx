@@ -116,10 +116,7 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
                         <Calendar className="w-3.5 h-3.5 text-blue-400" />
                         {course.batch}
                       </span>
-                      <span className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded text-amber-400">
-                        <Star className="w-3.5 h-3.5 fill-amber-400" />
-                        {course.rating} ({course.reviewsCount})
-                      </span>
+
                     </div>
                   </div>
 
@@ -142,22 +139,6 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
                       ))}
                     </div>
 
-                    {/* Instructor Info */}
-                    <div className="mt-5 flex items-center gap-3 pt-3 border-t border-slate-800/80">
-                      <img 
-                        src={course.instructorAvatar} 
-                        alt={course.instructorName}
-                        className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-700" 
-                      />
-                      <div>
-                        <div className="text-xs font-semibold text-slate-200">
-                          {course.instructorName}
-                        </div>
-                        <div className="text-[10px] text-slate-500 truncate max-w-[170px]">
-                          {course.instructorRole}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </div>
 

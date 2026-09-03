@@ -167,7 +167,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 
   // Submissions and Students state
   const [submissions, setSubmissions] = useState<StudentSubmission[]>(() => StorageService.getSubmissions());
-  const [students, setStudents] = useState<RegisteredStudent[]>(() => StorageService.getStudents());
+  const [students, setStudents] = useState<RegisteredStudent[]>([]);
   const [broadcastMessage, setBroadcastMessage] = useState('🔥 Doubt clearing session starts at 3:30 PM IST on Google Meet. Bring your timeline .dra files!');
   const [broadcastSentToast, setBroadcastSentToast] = useState(false);
 
@@ -177,7 +177,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
     async function loadLiveStudents() {
       try {
         const dbStudents = await DbService.getStudents();
-        if (isMounted && dbStudents && dbStudents.length > 0) {
+        if (isMounted && dbStudents) {
           setStudents(dbStudents);
         }
       } catch (err) {

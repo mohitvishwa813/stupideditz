@@ -101,10 +101,26 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
               
               // Update local storage so UI reflects immediately
               if (currentUser) {
-                const updatedUser = { ...currentUser, purchasedAssets: [...(currentUser.purchasedAssets || []), bundlePromo.id] };
-                import('../services/storageService').then(m => m.StorageService.setCurrentUser(updatedUser));
-                // Note: In a real app we'd dispatch an event or use context to trigger re-render of layout
-                window.location.reload(); // Quickest way to force refresh of the whole app state
+                const newOrder = {
+                  id: response.razorpay_order_id,
+                  amount: orderRes.amount ? orderRes.amount / 100 : 1099,
+                  currency: orderRes.currency || 'INR',
+                  itemType: 'bundle',
+                  itemId: bundlePromo.id,
+                  status: 'paid',
+                  createdAt: new Date().toISOString()
+                };
+                
+                import('../services/storageService').then(m => {
+                  const latestUser = m.StorageService.getCurrentUser() || currentUser;
+                  const updatedUser = { 
+                    ...latestUser, 
+                    purchasedAssets: [...(latestUser.purchasedAssets || []), bundlePromo.id],
+                    orderHistory: [newOrder, ...(latestUser.orderHistory || [])]
+                  };
+                  m.StorageService.setCurrentUser(updatedUser);
+                  window.location.reload(); 
+                });
               }
 
               // Direct them to the bundle download drive link on success
@@ -238,9 +254,26 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
                 confetti({ particleCount: 50, spread: 60, origin: { y: 0.7 }, colors: ['#3b82f6', '#10b981', '#60a5fa'] });
                 
                 if (currentUser) {
-                  const updatedUser = { ...currentUser, purchasedAssets: [...(currentUser.purchasedAssets || []), asset.id] };
-                  import('../services/storageService').then(m => m.StorageService.setCurrentUser(updatedUser));
-                  window.location.reload(); 
+                  const newOrder = {
+                    id: response.razorpay_order_id,
+                    amount: orderRes.amount ? orderRes.amount / 100 : asset.price,
+                    currency: orderRes.currency || 'INR',
+                    itemType: 'asset',
+                    itemId: asset.id,
+                    status: 'paid',
+                    createdAt: new Date().toISOString()
+                  };
+                  
+                  import('../services/storageService').then(m => {
+                    const latestUser = m.StorageService.getCurrentUser() || currentUser;
+                    const updatedUser = { 
+                      ...latestUser, 
+                      purchasedAssets: [...(latestUser.purchasedAssets || []), asset.id],
+                      orderHistory: [newOrder, ...(latestUser.orderHistory || [])]
+                    };
+                    m.StorageService.setCurrentUser(updatedUser);
+                    window.location.reload(); 
+                  });
                 }
 
                 if (asset.downloadUrl) window.open(asset.downloadUrl, '_blank');

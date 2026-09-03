@@ -284,7 +284,7 @@ INSERT OR IGNORE INTO breakdown_timeline_markers (id, breakdown_id, timestamp, s
 
 -- 7. Site CMS Settings
 INSERT OR IGNORE INTO site_settings (key, value_json, "group", description, updated_by) VALUES
-('hero_headline', '"Master DaVinci Resolve 19 & High-Retention Video Editing"', 'hero', 'Main headline text on homepage hero section', 'user-admin-1'),
+('hero_headline', '"Master DaVinci Resolve & High-Retention Video Editing"', 'hero', 'Main headline text on homepage hero section', 'user-admin-1'),
 ('hero_subheadline', '"Learn retention-focused documentary storytelling, Zem TV motion graphics, surgical Fairlight audio, and node color grading in 26 live days."', 'hero', 'Subheadline text on homepage hero section', 'user-admin-1'),
 ('banner_announcement', '{"text": "🚀 September 2026 Batch Enrolling — Only 14 Seats Remaining!", "link": "#courses-section", "isActive": true}', 'branding', 'Top floating announcement bar banner', 'user-admin-1'),
 ('contact_support_email', '"support@stupideditz.com"', 'footer', 'Support email address displayed in footer', 'user-admin-1');

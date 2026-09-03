@@ -537,31 +537,30 @@ export class DbService {
   // Fetch Students Roster from Turso
   static async getStudents(): Promise<RegisteredStudent[]> {
     try {
-      await this.initStudentTable();
-      let res = await turso.execute('SELECT * FROM students');
+      let res = await turso.execute(`
+        SELECT u.id, u.full_name, u.email, u.avatar_url, u.status as user_status, u.created_at,
+               (SELECT COUNT(*) FROM payment_orders p WHERE p.user_id = u.id AND p.status = 'paid' AND (p.item_type = 'course' OR p.item_type = 'bundle')) as purchases_count
+        FROM users u 
+        WHERE u.role = 'student'
+      `);
 
-      // Auto-seed if empty
-      if (res.rows.length === 0) {
-        console.log('⚡ [Turso DB] Empty students table. Auto-seeding initial students to Turso DB...');
-        for (const st of INITIAL_STUDENTS) {
-          await this.saveStudentToDb(st);
-        }
-        res = await turso.execute('SELECT * FROM students');
-      }
-
-      return res.rows.map((r: any) => ({
-        id: String(r.id),
-        name: String(r.name),
-        email: String(r.email),
-        batch: String(r.batch_name || 'September 2026 Live Cohort'),
-        enrolledAt: String(r.enrolled_at || new Date().toISOString().split('T')[0]),
-        status: String(r.status || 'Active') as any,
-        completedDays: Number(r.completed_days || 0),
-        avatar: String(r.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80')
-      }));
+      return res.rows.map((r: any) => {
+        const isEnrolled = Number(r.purchases_count) > 0;
+        
+        return {
+          id: String(r.id),
+          name: String(r.full_name || 'Student'),
+          email: String(r.email),
+          batch: isEnrolled ? 'September 2026 Live Cohort' : 'Not Enrolled',
+          enrolledAt: String(r.created_at || new Date().toISOString().split('T')[0]),
+          status: isEnrolled ? 'Active' : 'Registered',
+          completedDays: 0,
+          avatar: String(r.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80')
+        };
+      });
     } catch (err) {
-      console.warn('Failed loading students from Turso DB:', err);
-      return INITIAL_STUDENTS;
+      console.warn('Failed loading students from users table:', err);
+      return [];
     }
   }
 

@@ -82,21 +82,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
       <div className="absolute top-40 left-1/4 w-[450px] h-[250px] glow-spot-emerald blur-[110px] rounded-full pointer-events-none" />
 
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative z-10">
-        {/* Top Cohort Announcement Pill */}
-        <div className="flex justify-center mb-6">
-          <div className="inline-flex items-center gap-2.5 px-4.5 py-1.5 rounded-full bg-[#121626]/80 backdrop-blur-md border border-slate-700/60 shadow-xl text-xs font-semibold text-slate-300 pulse-glow-border hover:scale-105 transition-transform cursor-pointer"
-            onClick={onExploreCurriculum}
-          >
-            <span className="flex h-2.5 w-2.5 relative">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-blue-400 opacity-75"></span>
-              <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-blue-500"></span>
-            </span>
-            <span className="text-white font-medium">Registration Open for September 2026 Batch</span>
-            <span className="text-slate-600">•</span>
-            <span className="text-blue-400 font-mono font-bold">26 Days Live Masterclass</span>
-          </div>
-        </div>
-
+        {/* Top Cohort Announcement Pill removed as per request */}
         {/* Hero Main Headline & Value Proposition */}
         <div className="text-center max-w-4xl mx-auto space-y-5">
           <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-[1.12] text-white">
@@ -106,10 +92,6 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </span>
           </h1>
 
-          <p className="text-base sm:text-lg text-slate-300 max-w-2xl mx-auto leading-relaxed font-normal">
-            The complete 26-Day live cohort for creators and documentary editors. 
-            Learn rapid keyboard rough cuts, the <strong className="text-emerald-400 font-semibold">Zem TV motion aesthetic</strong>, Hollywood node color grading, and Fairlight sound design.
-          </p>
 
           {/* Primary Action Buttons */}
           <div className="pt-4 flex flex-wrap items-center justify-center gap-3.5">
@@ -198,7 +180,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 <div className="w-3 h-3 rounded-full bg-emerald-500/80" />
               </div>
               <span className="text-xs font-mono font-semibold text-slate-300">
-                DaVinci Resolve 19 — Masterclass_Project.dra [4K 23.976fps]
+                DaVinci Resolve — Masterclass_Project.dra [4K 23.976fps]
               </span>
             </div>
 
