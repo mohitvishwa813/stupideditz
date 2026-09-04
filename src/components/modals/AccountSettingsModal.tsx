@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { UserProfile } from '../../types';
 import { StorageService } from '../../services/storageService';
 import { X, User, Phone, Mail, Lock, CheckCircle2, Image } from 'lucide-react';
@@ -44,8 +45,8 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
     }, 1200);
   };
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-md bg-[#10131f] text-slate-100 rounded-3xl shadow-2xl border border-slate-700/80 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#141726] border-b border-slate-800">
@@ -165,6 +166,7 @@ export const AccountSettingsModal: React.FC<AccountSettingsModalProps> = ({
           </button>
         </form>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

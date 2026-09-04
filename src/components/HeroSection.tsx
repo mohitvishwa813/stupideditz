@@ -21,8 +21,8 @@ import {
   Calendar,
   Check
 } from 'lucide-react';
-import { UserProfile, Course, HeroShowcaseOption } from '../types';
-import { INITIAL_HERO_OPTIONS } from '../data/initialData';
+import { CourseSession, RegisteredStudent, VideoAsset, BundlePromo, UserProfile, Course, HeroShowcaseOption } from '../types';
+
 import { soundFx } from '../utils/soundEffects';
 
 interface HeroSectionProps {
@@ -48,7 +48,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   const totalDaysCount = sessionsCount && sessionsCount > 0 ? sessionsCount : 26;
 
   // Hero Showcase Options derived from DB or default
-  const options = heroOptions && heroOptions.length >= 3 ? heroOptions : INITIAL_HERO_OPTIONS;
+  const options = heroOptions;
 
   // Interactive DaVinci Studio Workbench State (Clean desktop view, no phone frames)
   const [selectedLut, setSelectedLut] = useState<'raw' | 'teal-orange' | 'kodak' | 'cyberpunk'>('teal-orange');
@@ -170,6 +170,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         </div>
 
         {/* Studio Timeline & Color Grading Interactive Simulator (Clean Widescreen Desktop Card) */}
+        {options && options.length > 0 ? (
         <div className="mt-12 max-w-5xl mx-auto glass-card rounded-2xl border border-slate-700/60 shadow-2xl overflow-hidden pulse-glow-border">
           {/* Header Controls */}
           <div className="bg-[#141828] px-4 py-3 border-b border-slate-800 flex flex-wrap items-center justify-between gap-3">
@@ -277,6 +278,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
             </div>
           </div>
         </div>
+        ) : null}
 
         {/* Dynamic Metric Counter Bar */}
         <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">

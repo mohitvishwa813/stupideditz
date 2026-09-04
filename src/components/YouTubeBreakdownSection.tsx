@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { YouTubeBreakdown, VideoAsset, UserProfile } from '../types';
 import { Play, Tv, Clock, Eye, Sparkles, DownloadCloud, Volume2, ArrowUpRight, Bookmark } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
@@ -24,7 +24,15 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
     return assets.find(a => a.id === assetId);
   };
 
-  if (!selectedBreakdown || !selectedBreakdown.id) return null;
+  useEffect(() => {
+    if (breakdowns && breakdowns.length > 0 && (!selectedBreakdown || !selectedBreakdown.id)) {
+      setSelectedBreakdown(breakdowns[0]);
+    }
+  }, [breakdowns, selectedBreakdown]);
+
+  const activeBreakdown = selectedBreakdown?.id ? selectedBreakdown : breakdowns[0];
+
+  if (!breakdowns || breakdowns.length === 0 || !activeBreakdown) return null;
 
   return (
     <section className="py-16 bg-[#090a0f] border-t border-slate-800 text-slate-100 relative" id="youtube-breakdowns-section">
@@ -46,7 +54,7 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
         {/* Video Selector Cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {breakdowns.map((item) => {
-            const isSelected = selectedBreakdown.id === item.id;
+            const isSelected = activeBreakdown.id === item.id;
             return (
               <button
                 key={item.id}
@@ -94,18 +102,18 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
             <div className="relative aspect-video rounded-xl overflow-hidden bg-black border border-slate-800 shadow-lg">
               <iframe
                 className="w-full h-full"
-                src={`https://www.youtube-nocookie.com/embed/${selectedBreakdown.youtubeId}?rel=0`}
-                title={selectedBreakdown.title}
+                src={`https://www.youtube-nocookie.com/embed/${activeBreakdown.youtubeId}?rel=0`}
+                title={activeBreakdown.title}
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
               />
             </div>
             <div className="space-y-1">
               <h3 className="text-lg font-bold text-white">
-                {selectedBreakdown.title}
+                {activeBreakdown.title}
               </h3>
               <p className="text-xs text-slate-400 leading-relaxed">
-                {selectedBreakdown.description}
+                {activeBreakdown.description}
               </p>
             </div>
           </div>
@@ -119,11 +127,11 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
                   <Bookmark className="w-3.5 h-3.5 text-blue-400" />
                   Key Editing Moments
                 </span>
-                <span className="text-blue-400">{selectedBreakdown.timelineMarkers.length} Markers</span>
+                <span className="text-blue-400">{activeBreakdown.timelineMarkers.length} Markers</span>
               </div>
 
               <div className="space-y-2 max-h-[220px] overflow-y-auto pr-1">
-                {selectedBreakdown.timelineMarkers.map((marker, idx) => {
+                {activeBreakdown.timelineMarkers.map((marker, idx) => {
                   const isActive = activeMarker === idx;
                   return (
                     <div
@@ -168,7 +176,7 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
                 Download Materials from This Video
               </h4>
               <div className="space-y-2">
-                {selectedBreakdown.assetsUsed.map((assetId) => {
+                {activeBreakdown.assetsUsed.map((assetId) => {
                   const asset = getAssetDetails(assetId);
                   if (!asset) return null;
                   return (

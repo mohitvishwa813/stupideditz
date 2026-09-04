@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption, YouTubeBreakdown, BundlePromo } from '../types';
 import { StorageService } from '../services/storageService';
 import { DbService } from '../services/dbService';
-import { INITIAL_HERO_OPTIONS } from '../data/initialData';
+
 import { 
   Plus, 
   Edit3, 
@@ -83,7 +83,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'hero' | 'promos'>('schedule');
   const [heroOptionsList, setHeroOptionsList] = useState<HeroShowcaseOption[]>(
-    heroOptions && heroOptions.length >= 3 ? heroOptions : INITIAL_HERO_OPTIONS
+    heroOptions
   );
   const [selectedBatchFilter, setSelectedBatchFilter] = useState<'All' | 'September' | 'October'>('All');
   const [studentBatchFilter, setStudentBatchFilter] = useState<string>('All');
@@ -119,7 +119,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       onUpdateYoutubeBreakdowns(updatedList);
       
       // Save to cloud
-      await DbService.saveYouTubeBreakdownToDb(savedBreakdown);
+      await DbService.saveYouTubeBreakdownToDb(savedBreakdown, updatedList.length);
       
       // Re-fetch
       const liveData = await DbService.getYouTubeBreakdowns();

@@ -77,7 +77,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
       let finalUser = { ...apiRes.user };
       if (finalUser.enrolledCourses && finalUser.enrolledCourses.length > 0 && typeof finalUser.enrolledCourses[0] === 'string') {
         const catalog = StorageService.getCourses();
-        finalUser.enrolledCourses = finalUser.enrolledCourses.map((id: string) => {
+        finalUser.enrolledCourses = (finalUser.enrolledCourses as any[]).map((id: string) => {
           const course = catalog.find(c => c.id === id) || catalog[0];
           return {
             courseId: course.id,

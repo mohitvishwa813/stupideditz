@@ -10,7 +10,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLogin }) => {
   return (
     <footer className="bg-[#070910] border-t border-slate-800/80 text-slate-400 text-xs">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
           {/* Brand Col */}
           <div className="space-y-3 md:col-span-2">
             <div className="flex items-center gap-2.5">
@@ -25,14 +25,11 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLogin }) => {
               The premier DaVinci Resolve & documentary motion masterclass. Helping editors craft high-retention stories, master keyboard workflows, and build high-earning editing careers.
             </p>
             <div className="flex items-center gap-3 pt-1 text-slate-400">
-              <a href="https://youtube.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">
+              <a href="https://youtube.com/@stupidmaan?si=PkbOEpfa33QZTMA9" target="_blank" rel="noreferrer" className="hover:text-red-500 transition-colors">
                 <Youtube className="w-4 h-4" />
               </a>
-              <a href="https://instagram.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">
+              <a href="https://www.instagram.com/horizontal_by_kavish?igsi=MWZscHZwaDh0aHg5ZA%3D%3D&utm_source=qr" target="_blank" rel="noreferrer" className="hover:text-pink-500 transition-colors">
                 <Instagram className="w-4 h-4" />
-              </a>
-              <a href="https://twitter.com" target="_blank" rel="noreferrer" className="hover:text-blue-400 transition-colors">
-                <Twitter className="w-4 h-4" />
               </a>
             </div>
           </div>
@@ -66,18 +63,6 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, onOpenLogin }) => {
             </ul>
           </div>
 
-          {/* Batch Schedule */}
-          <div className="space-y-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-slate-200 font-mono">
-              September 2026 Batch
-            </h4>
-            <p className="text-xs text-slate-400 leading-relaxed">
-              <strong className="text-slate-300">Cohort Duration:</strong> 15 Sep → 20 Oct<br />
-              <strong className="text-slate-300">Live Classes:</strong> Mon – Fri (3:30 PM IST)<br />
-              <strong className="text-slate-300">Doubt Clearing:</strong> Every Saturday<br />
-              <strong className="text-slate-300">Format:</strong> Sundays Off
-            </p>
-          </div>
         </div>
 
         <div className="pt-6 border-t border-slate-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">

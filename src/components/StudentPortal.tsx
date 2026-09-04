@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CourseSession, StudentSubmission, UserProfile, EnrolledCourseInfo } from '../types';
+import { CourseSession, StudentSubmission, UserProfile, EnrolledCourseInfo, VideoAsset, BundlePromo } from '../types';
 import { 
   Award, 
   MessageSquare, 
@@ -43,7 +43,7 @@ import { SessionRatingModal } from './modals/SessionRatingModal';
 import { RecordingModal } from './modals/RecordingModal';
 import { MockTestModal } from './modals/MockTestModal';
 import { AskQuestionModal } from './modals/AskQuestionModal';
-import { INITIAL_ASSETS, INITIAL_BUNDLE_PROMO } from '../data/initialData';
+
 
 import { Receipt, Settings, User, Phone, Mail, Lock, CreditCard } from 'lucide-react';
 import { StorageService } from '../services/storageService';
@@ -57,6 +57,8 @@ interface StudentPortalProps {
   onOpenEnroll?: (courseId?: string) => void;
   onUpdateUser?: (updatedUser: UserProfile) => void;
   initialTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'orders' | 'account';
+  assets?: VideoAsset[];
+  bundlePromo?: BundlePromo | null;
 }
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({
@@ -67,7 +69,9 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onNavigateHome,
   onOpenEnroll,
   onUpdateUser,
-  initialTab = 'enrolled-courses'
+  initialTab = 'enrolled-courses',
+  assets = [],
+  bundlePromo = null
 }) => {
   const [activeTab, setActiveTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'notes' | 'orders' | 'account'>(initialTab);
   const [selectedWeek, setSelectedWeek] = useState<number | 'all'>('all');
@@ -896,14 +900,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             ) : (
               <div className="space-y-6">
-                {currentUser.purchasedAssets.includes(INITIAL_BUNDLE_PROMO.id) && (
+                {bundlePromo && currentUser.purchasedAssets.includes(bundlePromo.id) && (
                   <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
                         VIP STUDENT LOCKER
                       </span>
                       <h2 className="text-2xl font-extrabold text-white font-sans mt-1">
-                        {INITIAL_BUNDLE_PROMO.title}
+                        {bundlePromo.title}
                       </h2>
                       <p className="text-xs sm:text-sm text-slate-400 mt-1">
                         Download all licensed sound design assets, 3D LUTs, DaVinci Fusion macros, and project timelines.
@@ -911,7 +915,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                     </div>
 
                     <a
-                      href={INITIAL_BUNDLE_PROMO.driveLink}
+                      href={bundlePromo.driveLink}
                       target="_blank"
                       rel="noopener noreferrer"
                       className="px-6 py-3 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-black text-xs flex items-center gap-2 transition-colors border border-blue-500/50"
@@ -923,7 +927,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                 )}
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {INITIAL_ASSETS.filter(a => currentUser.purchasedAssets?.includes(a.id)).map((asset) => (
+                  {assets.filter(a => currentUser.purchasedAssets?.includes(a.id)).map((asset) => (
                     <div key={asset.id} className="bg-[#121627] border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between">
                       <div className="relative aspect-video">
                         <img src={asset.thumbnail} alt={asset.title} className="w-full h-full object-cover" />
@@ -1036,11 +1040,11 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                       </div>
 
                       <h4 className="text-sm font-bold text-white">
-                        {order.itemType === 'bundle' 
-                          ? INITIAL_BUNDLE_PROMO.title 
-                          : order.itemType === 'asset' 
-                            ? INITIAL_ASSETS.find(a => a.id === order.itemId)?.title || 'Digital Asset'
-                            : 'Masterclass Course'}
+                        {order.itemId === bundlePromo?.id 
+                          ? bundlePromo?.title 
+                          : (order.itemType === 'asset' 
+                            ? assets.find(a => a.id === order.itemId)?.title || 'Digital Asset'
+                            : 'Masterclass Course')}
                       </h4>
                       
                       <div className="text-xs text-slate-400 font-mono space-x-3">

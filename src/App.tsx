@@ -6,7 +6,7 @@
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption, BundlePromo } from './types';
-import { INITIAL_HERO_OPTIONS } from './data/initialData';
+
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER, GUEST_USER } from './services/storageService';
 import { DbService } from './services/dbService';
 import { Navbar } from './components/Navbar';
@@ -26,12 +26,12 @@ export default function App() {
   const navigate = useNavigate();
   const [studentPortalTab, setStudentPortalTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'orders' | 'account'>('enrolled-courses');
   
-  const [sessions, setSessions] = useState<CourseSession[]>(() => StorageService.getSessions());
-  const [assets, setAssets] = useState<VideoAsset[]>(() => StorageService.getAssets());
-  const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>(() => StorageService.getYouTubeBreakdowns());
-  const [bundlePromo, setBundlePromo] = useState<BundlePromo>(() => StorageService.getBundlePromo());
-  const [courses, setCourses] = useState<Course[]>(() => StorageService.getCourses());
-  const [heroOptions, setHeroOptions] = useState<HeroShowcaseOption[]>(INITIAL_HERO_OPTIONS);
+  const [sessions, setSessions] = useState<CourseSession[]>([]);
+  const [assets, setAssets] = useState<VideoAsset[]>([]);
+  const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>([]);
+  const [bundlePromo, setBundlePromo] = useState<BundlePromo | null>(null);
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [heroOptions, setHeroOptions] = useState<HeroShowcaseOption[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getCurrentUser());
   
   const [isLoginModalOpen, setIsLoginModalOpen] = useState(false);
@@ -55,12 +55,12 @@ export default function App() {
           DbService.getHeroOptions()
         ]);
         if (isMounted) {
-          if (dbSessions && dbSessions.length > 0) setSessions(dbSessions);
-          if (dbBreakdowns && dbBreakdowns.length > 0) setYoutubeBreakdowns(dbBreakdowns);
-          if (dbPromo) setBundlePromo(dbPromo);
-          if (dbCourses && dbCourses.length > 0) setCourses(dbCourses);
-          if (dbAssets && dbAssets.length > 0) setAssets(dbAssets);
-          if (dbHeroOptions && dbHeroOptions.length > 0) setHeroOptions(dbHeroOptions);
+          if (dbSessions) setSessions(dbSessions);
+          if (dbBreakdowns) setYoutubeBreakdowns(dbBreakdowns);
+          if (dbPromo !== undefined) setBundlePromo(dbPromo);
+          if (dbCourses) setCourses(dbCourses);
+          if (dbAssets) setAssets(dbAssets);
+          if (dbHeroOptions) setHeroOptions(dbHeroOptions);
         }
       } catch (err) {
         console.warn('Failed loading data from Turso, using local defaults:', err);
@@ -150,7 +150,7 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white">
+    <div className="min-h-screen bg-[#090a0f] text-slate-100 flex flex-col font-sans selection:bg-blue-600 selection:text-white select-none">
       {/* Top Studio Navigation */}
       <Navbar
         studentActiveTab={studentPortalTab}
@@ -249,6 +249,8 @@ export default function App() {
                 onNavigateHome={() => handleNavigate('home')}
                 onOpenEnroll={handleOpenEnrollModal}
                 onUpdateUser={(updated) => setCurrentUser(updated)}
+                assets={assets}
+                bundlePromo={bundlePromo}
               />
             ) : (
               <Navigate to="/" replace />

@@ -258,7 +258,7 @@ export class DbService {
   static async getSessions(): Promise<CourseSession[]> {
     try {
       const res = await turso.execute('SELECT * FROM course_sessions ORDER BY date_iso ASC');
-      if (res.rows.length === 0) return INITIAL_SESSIONS;
+      if (res.rows.length === 0) return [];
 
       return res.rows.map((r: any) => ({
         id: String(r.id),
@@ -286,7 +286,7 @@ export class DbService {
       }));
     } catch (err) {
       console.warn('Using fallback sessions due to DB query error:', err);
-      return INITIAL_SESSIONS;
+      return [];
     }
   }
 
@@ -329,7 +329,7 @@ export class DbService {
       });
     } catch (err) {
       console.warn('Using fallback breakdowns due to DB query error:', err);
-      return INITIAL_YOUTUBE_BREAKDOWNS;
+      return [];
     }
   }
 
@@ -394,7 +394,7 @@ export class DbService {
       await this.initCourseTables();
       const res = await turso.execute('SELECT * FROM bundle_promos WHERE id = "main_promo"');
       if (res.rows.length === 0) {
-        return INITIAL_BUNDLE_PROMO;
+        return null as any; // No bundle promo found
       }
       
       const r = res.rows[0] as any;
@@ -407,7 +407,7 @@ export class DbService {
         driveLink: String(r.drive_link)
       };
     } catch (err) {
-      return INITIAL_BUNDLE_PROMO;
+      return null as any; // No bundle promo found
     }
   }
 
@@ -543,7 +543,7 @@ export class DbService {
           email: String(r.email),
           batch: isEnrolled ? 'September 2026 Live Cohort' : 'Not Enrolled',
           enrolledAt: String(r.created_at || new Date().toISOString().split('T')[0]),
-          status: isEnrolled ? 'Active' : 'Registered',
+          status: isEnrolled ? 'Active' : 'Pending',
           completedDays: 0,
           avatar: String(r.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=150&q=80')
         };
@@ -598,8 +598,32 @@ export class DbService {
       });
       return true;
     } catch (err) {
-      console.error('Failed deleting student from Turso DB:', err);
+      console.warn('Failed deleting student from Turso DB:', err);
       return false;
+    }
+  }
+
+  // Fetch Payment Orders for User
+  static async getUserOrders(userId: string): Promise<any[]> {
+    try {
+      const res = await turso.execute({
+        sql: `SELECT * FROM payment_orders WHERE user_id = ? ORDER BY created_at DESC`,
+        args: [userId]
+      });
+      return res.rows.map((r: any) => ({
+        id: String(r.id),
+        userId: String(r.user_id),
+        razorpayOrderId: String(r.razorpay_order_id),
+        amount: Number(r.amount),
+        currency: String(r.currency),
+        status: String(r.status),
+        itemType: String(r.item_type || ''),
+        itemId: String(r.item_id || ''),
+        createdAt: String(r.created_at)
+      }));
+    } catch (err) {
+      console.warn('Failed fetching orders for user:', err);
+      return [];
     }
   }
 
@@ -655,7 +679,7 @@ export class DbService {
       }));
     } catch (err) {
       console.warn('Failed loading video assets from Turso DB:', err);
-      return INITIAL_ASSETS;
+      return [];
     }
   }
 
@@ -761,7 +785,7 @@ export class DbService {
       }));
     } catch (err) {
       console.warn('Failed loading hero options from Turso DB:', err);
-      return INITIAL_HERO_OPTIONS;
+      return [];
     }
   }
 

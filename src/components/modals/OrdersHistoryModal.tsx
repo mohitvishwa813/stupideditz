@@ -1,7 +1,9 @@
 import React from 'react';
+import { createPortal } from 'react-dom';
 import { UserProfile } from '../../types';
 import { X, Receipt, CheckCircle2, CreditCard, Download, ExternalLink } from 'lucide-react';
 import { soundFx } from '../../utils/soundEffects';
+import { DbService } from '../../services/dbService';
 
 interface OrdersHistoryModalProps {
   isOpen: boolean;
@@ -16,36 +18,38 @@ export const OrdersHistoryModal: React.FC<OrdersHistoryModalProps> = ({
 }) => {
   if (!isOpen) return null;
 
-  // Mock confirmed orders matching database Razorpay records
-  const mockOrders = [
-    {
-      id: 'ORD-RZP-892401',
-      title: 'DaVinci Resolve 19: High-Retention Masterclass',
-      type: 'Course Cohort',
-      batch: 'September 2026 Live Cohort',
-      amount: '₹4,999',
-      date: '10 Sep 2026',
-      paymentMethod: 'Razorpay UPI (GPay)',
-      paymentId: 'pay_P89201948201',
-      status: 'SUCCESSFUL'
-    },
-    {
-      id: 'ORD-RZP-781920',
-      title: 'Creator Production Asset Vault (40GB)',
-      type: 'Asset Pack Locker',
-      batch: 'VIP Access',
-      amount: '₹999',
-      date: '12 Aug 2026',
-      paymentMethod: 'Razorpay Card',
-      paymentId: 'pay_P78192038101',
-      status: 'SUCCESSFUL'
+  const [ordersList, setOrdersList] = React.useState<any[]>([]);
+  const [loading, setLoading] = React.useState(true);
+
+  React.useEffect(() => {
+    if (isOpen && currentUser && currentUser.id) {
+      const fetchOrders = async () => {
+        setLoading(true);
+        const orders = await DbService.getUserOrders(currentUser.id);
+        
+        const formattedOrders = orders
+          .filter(o => o.status === 'paid' || o.status === 'created')
+          .map(o => ({
+            id: o.razorpayOrderId,
+            title: o.itemType === 'course' ? 'DaVinci Resolve Masterclass' : o.itemType === 'bundle' ? 'Full Platform Bundle' : 'Creator Asset Pack',
+            type: o.itemType === 'course' ? 'Course Cohort' : o.itemType === 'bundle' ? 'Bundle Access' : 'Asset Pack',
+            batch: 'September 2026',
+            amount: `₹${o.amount}`,
+            date: new Date(o.createdAt).toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
+            paymentMethod: 'Razorpay',
+            paymentId: o.razorpayOrderId,
+            status: o.status === 'paid' ? 'SUCCESSFUL' : 'PENDING'
+          }));
+        
+        setOrdersList(formattedOrders);
+        setLoading(false);
+      };
+      fetchOrders();
     }
-  ];
+  }, [isOpen, currentUser]);
 
-  const ordersList = currentUser.isEnrolled ? mockOrders : [];
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+  return createPortal(
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
       <div className="relative w-full max-w-2xl bg-[#10131f] text-slate-100 rounded-3xl shadow-2xl border border-slate-700/80 overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 bg-[#141726] border-b border-slate-800">
@@ -72,7 +76,11 @@ export const OrdersHistoryModal: React.FC<OrdersHistoryModalProps> = ({
 
         {/* Content */}
         <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
-          {ordersList.length === 0 ? (
+          {loading ? (
+            <div className="py-12 flex justify-center items-center">
+              <div className="w-8 h-8 rounded-full border-2 border-slate-700 border-t-emerald-500 animate-spin" />
+            </div>
+          ) : ordersList.length === 0 ? (
             <div className="py-12 text-center space-y-3">
               <div className="w-12 h-12 rounded-2xl bg-slate-800 flex items-center justify-center text-slate-400 mx-auto">
                 <CreditCard className="w-6 h-6" />
@@ -124,6 +132,7 @@ export const OrdersHistoryModal: React.FC<OrdersHistoryModalProps> = ({
           )}
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };

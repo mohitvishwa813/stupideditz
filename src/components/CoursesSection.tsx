@@ -40,7 +40,7 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
       if (coursesProp && coursesProp.length > 0) return;
       try {
         const liveCourses = await DbService.getCourses();
-        if (isMounted && liveCourses && liveCourses.length > 0) {
+        if (isMounted && liveCourses) {
           setCourses(liveCourses);
         }
       } catch (e) {
@@ -51,7 +51,7 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
     return () => { isMounted = false; };
   }, [coursesProp]);
 
-  const activeCoursesList = (coursesProp && coursesProp.length > 0) ? coursesProp : (courses.length > 0 ? courses : COURSES_CATALOG);
+  const activeCoursesList = coursesProp ? coursesProp : courses;
 
   return (
     <section className="py-16 bg-[#0c0e18] text-slate-100 border-t border-slate-800" id="courses-section">
