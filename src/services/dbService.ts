@@ -104,13 +104,8 @@ export class DbService {
       await this.initCourseTables();
       let coursesRes = await turso.execute('SELECT * FROM courses');
 
-      // Auto-seed Turso DB if table is empty
       if (coursesRes.rows.length === 0) {
-        console.log('⚡ [Turso DB] Empty courses table detected. Auto-seeding initial catalog to Turso Cloud DB...');
-        for (const course of COURSES_CATALOG) {
-          await this.saveCourseToDb(course);
-        }
-        coursesRes = await turso.execute('SELECT * FROM courses');
+        return [];
       }
 
       const highlightsRes = await turso.execute('SELECT * FROM course_highlights ORDER BY display_order ASC');
@@ -302,11 +297,7 @@ export class DbService {
       let breakdownsRes = await turso.execute('SELECT * FROM youtube_breakdowns ORDER BY created_at ASC');
       
       if (breakdownsRes.rows.length === 0) {
-        console.log('⚡ [Turso DB] Empty youtube_breakdowns table detected. Auto-seeding initial data...');
-        for (let i = 0; i < INITIAL_YOUTUBE_BREAKDOWNS.length; i++) {
-          await this.saveYouTubeBreakdownToDb(INITIAL_YOUTUBE_BREAKDOWNS[i], i + 1);
-        }
-        breakdownsRes = await turso.execute('SELECT * FROM youtube_breakdowns ORDER BY created_at ASC');
+        return [];
       }
 
       const markersRes = await turso.execute('SELECT * FROM breakdown_timeline_markers ORDER BY display_order ASC');
@@ -403,7 +394,6 @@ export class DbService {
       await this.initCourseTables();
       const res = await turso.execute('SELECT * FROM bundle_promos WHERE id = "main_promo"');
       if (res.rows.length === 0) {
-        await this.saveBundlePromoToDb(INITIAL_BUNDLE_PROMO);
         return INITIAL_BUNDLE_PROMO;
       }
       
@@ -644,13 +634,8 @@ export class DbService {
       await this.initAssetTable();
       let res = await turso.execute('SELECT * FROM video_assets ORDER BY created_at ASC');
 
-      // Auto-seed Turso DB if table is empty
       if (res.rows.length === 0) {
-        console.log('⚡ [Turso DB] Empty video_assets table. Seeding initial catalog to Turso DB...');
-        for (const asset of INITIAL_ASSETS) {
-          await this.saveAssetToDb(asset);
-        }
-        res = await turso.execute('SELECT * FROM video_assets ORDER BY created_at ASC');
+        return [];
       }
 
       return res.rows.map((r: any) => ({
@@ -760,11 +745,7 @@ export class DbService {
       let res = await turso.execute('SELECT * FROM hero_showcase ORDER BY display_order ASC');
 
       if (res.rows.length === 0) {
-        console.log('⚡ [Turso DB] Empty hero_showcase table. Seeding default options to Turso DB...');
-        for (let i = 0; i < INITIAL_HERO_OPTIONS.length; i++) {
-          await this.saveHeroOptionToDb(INITIAL_HERO_OPTIONS[i], i + 1);
-        }
-        res = await turso.execute('SELECT * FROM hero_showcase ORDER BY display_order ASC');
+        return [];
       }
 
       return res.rows.map((r: any) => ({
