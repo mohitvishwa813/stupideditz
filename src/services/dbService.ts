@@ -145,7 +145,8 @@ export class DbService {
           instructorName: String(r.instructor_name || 'Arjun Rajput'),
           instructorRole: String(r.instructor_role || 'Lead Documentary Editor'),
           instructorAvatar: String(r.instructor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'),
-          isPopular: Boolean(r.is_popular)
+          isPopular: Boolean(r.is_popular),
+          whatYouWillLearnLink: r.what_you_will_learn_link ? String(r.what_you_will_learn_link) : undefined
         };
       });
     } catch (err) {
@@ -179,7 +180,8 @@ export class DbService {
             thumbnail_url = ?,
             instructor_name = ?,
             instructor_role = ?,
-            is_popular = ?
+            is_popular = ?,
+            what_you_will_learn_link = ?
           WHERE id = ?`,
           args: [
             course.title,
@@ -193,14 +195,15 @@ export class DbService {
             course.instructorName || 'Arjun Rajput',
             course.instructorRole || 'Lead Editor',
             course.isPopular ? 1 : 0,
+            course.whatYouWillLearnLink || null,
             targetId
           ]
         });
       } else {
         await turso.execute({
           sql: `INSERT INTO courses (
-            id, title, subtitle, description, batch_name, price, original_price, rating, level, thumbnail_url, instructor_name, instructor_role, is_popular, is_published
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+            id, title, subtitle, description, batch_name, price, original_price, rating, level, thumbnail_url, instructor_name, instructor_role, is_popular, is_published, what_you_will_learn_link
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
           args: [
             course.id,
             course.title,
@@ -214,7 +217,8 @@ export class DbService {
             course.thumbnail,
             course.instructorName || 'Arjun Rajput',
             course.instructorRole || 'Lead Editor',
-            course.isPopular ? 1 : 0
+            course.isPopular ? 1 : 0,
+            course.whatYouWillLearnLink || null
           ]
         });
       }

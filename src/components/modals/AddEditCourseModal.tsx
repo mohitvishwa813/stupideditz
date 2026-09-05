@@ -36,6 +36,7 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
     'Every Saturday Dedicated Doubt Clearing & Timeline Review'
   ]);
   const [newHighlight, setNewHighlight] = useState('');
+  const [whatYouWillLearnLink, setWhatYouWillLearnLink] = useState('');
 
   useEffect(() => {
     if (courseToEdit) {
@@ -55,11 +56,13 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
       setInstructorAvatar(courseToEdit.instructorAvatar || '');
       setIsPopular(Boolean(courseToEdit.isPopular));
       setHighlights(courseToEdit.highlights?.length ? courseToEdit.highlights : ['Live 90-Min Daily Cohort']);
+      setWhatYouWillLearnLink(courseToEdit.whatYouWillLearnLink || '');
     } else {
       setTitle('');
       setSubtitle('');
       setDescription('');
       setHighlights(['Live 90-Min Daily Classes', 'Dedicated Saturday Doubt Session']);
+      setWhatYouWillLearnLink('');
     }
   }, [courseToEdit]);
 
@@ -101,7 +104,8 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
       instructorName: instructorName.trim(),
       instructorRole: instructorRole.trim(),
       instructorAvatar: instructorAvatar.trim(),
-      isPopular: isPopular
+      isPopular: isPopular,
+      whatYouWillLearnLink: whatYouWillLearnLink.trim()
     };
 
     onSave(courseData);
@@ -247,6 +251,19 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
                 className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs text-white focus:outline-none focus:border-blue-500 font-mono"
               />
             </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-300 uppercase tracking-wider mb-1.5 font-mono">
+              "What You Will Learn" Link (URL)
+            </label>
+            <input
+              type="url"
+              value={whatYouWillLearnLink}
+              onChange={e => setWhatYouWillLearnLink(e.target.value)}
+              placeholder="https://docs.google.com/..."
+              className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-blue-500 font-mono"
+            />
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

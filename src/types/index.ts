@@ -161,6 +161,7 @@ export interface Course {
   instructorRole: string;
   instructorAvatar: string;
   isPopular?: boolean;
+  whatYouWillLearnLink?: string;
 }
 
 export interface PaymentOrder {

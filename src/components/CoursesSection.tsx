@@ -70,119 +70,132 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
           </p>
         </div>
 
-        {/* Courses Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 lg:gap-8">
+        {/* Courses Container */}
+        <div className="flex flex-col gap-8">
           {activeCoursesList.map((course) => {
             const isEnrolled = currentUser?.enrolledCourses?.some(c => c.courseId === course.id);
 
             return (
               <div 
                 key={course.id}
-                className="glass-card glass-card-hover border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl flex flex-col justify-between transition-all duration-300 group"
+                className="glass-card glass-card-hover border border-slate-700/60 rounded-2xl overflow-hidden shadow-xl flex flex-col lg:flex-row transition-all duration-300 group w-full"
                 id={`course-card-${course.id}`}
               >
-                <div>
-                  {/* Card Thumbnail */}
-                  <div className="relative aspect-video w-full overflow-hidden bg-black">
-                    <img 
-                      src={course.thumbnail} 
-                      alt={course.title}
-                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500 opacity-90" 
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-[#111422] via-transparent to-black/40" />
-                    
-                    {/* Badge */}
-                    <div className="absolute top-3 left-3 flex items-center gap-1.5">
-                      {course.isPopular && (
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-600 text-white text-[11px] font-semibold uppercase tracking-wide shadow-xs">
-                          Most Popular
-                        </span>
-                      )}
-                      <span className="px-2.5 py-0.5 rounded-full bg-black/70 backdrop-blur-md text-slate-200 text-[11px] font-mono border border-white/10">
-                        {course.level}
+                {/* Left side: Thumbnail */}
+                <div className="relative w-full lg:w-5/12 h-[240px] lg:h-auto overflow-hidden bg-black shrink-0">
+                  <img 
+                    src={course.thumbnail} 
+                    alt={course.title}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700 opacity-90" 
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-[#111422] via-[#111422]/20 to-black/40" />
+                  
+                  {/* Badge */}
+                  <div className="absolute top-4 left-4 flex flex-wrap items-center gap-2">
+                    {course.isPopular && (
+                      <span className="px-3 py-1 rounded-full bg-blue-600 text-white text-[11px] font-bold uppercase tracking-wider shadow-lg shadow-blue-500/30">
+                        Most Popular
                       </span>
-                    </div>
-
-                    {isEnrolled && (
-                      <div className="absolute top-3 right-3 bg-emerald-500 text-slate-950 px-2.5 py-0.5 rounded-full text-[11px] font-bold flex items-center gap-1 shadow-xs">
-                        <CheckCircle2 className="w-3.5 h-3.5" />
-                        Enrolled
-                      </div>
                     )}
-
-                    {/* Batch Date Overlay */}
-                    <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between text-xs text-slate-300 font-mono">
-                      <span className="flex items-center gap-1 bg-black/60 backdrop-blur-md px-2 py-0.5 rounded">
-                        <Calendar className="w-3.5 h-3.5 text-blue-400" />
-                        {course.batch}
-                      </span>
-
-                    </div>
+                    <span className="px-3 py-1 rounded-full bg-black/70 backdrop-blur-md text-slate-200 text-[11px] font-mono border border-white/10 font-semibold">
+                      {course.level}
+                    </span>
                   </div>
 
-                  {/* Card Body */}
-                  <div className="p-6">
-                    <h3 className="text-xl font-bold text-white leading-snug group-hover:text-blue-400 transition-colors">
+                  {isEnrolled && (
+                    <div className="absolute top-4 right-4 bg-emerald-500 text-slate-950 px-3 py-1 rounded-full text-[11px] font-bold flex items-center gap-1.5 shadow-lg shadow-emerald-500/30">
+                      <CheckCircle2 className="w-4 h-4" />
+                      Enrolled
+                    </div>
+                  )}
+
+                  {/* Batch Date Overlay */}
+                  <div className="absolute bottom-4 left-4 right-4 flex items-center justify-between text-xs text-slate-200 font-mono">
+                    <span className="flex items-center gap-1.5 bg-black/70 backdrop-blur-md px-3 py-1 rounded border border-white/10 font-semibold">
+                      <Calendar className="w-4 h-4 text-blue-400" />
+                      {course.batch}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Right side: Content & Actions */}
+                <div className="flex-1 p-6 lg:p-8 flex flex-col justify-between">
+                  <div>
+                    <h3 className="text-2xl lg:text-3xl font-bold text-white leading-tight group-hover:text-blue-400 transition-colors">
                       {course.title}
                     </h3>
-                    <p className="text-xs text-slate-400 mt-2 line-clamp-2 leading-relaxed">
+                    <p className="text-sm text-slate-400 mt-3 leading-relaxed">
                       {course.subtitle}
                     </p>
 
                     {/* Highlights list */}
-                    <div className="mt-4 space-y-2 border-t border-slate-800/80 pt-4 text-xs text-slate-300">
-                      {course.highlights.slice(0, 3).map((item, idx) => (
-                        <div key={idx} className="flex items-start gap-2">
-                          <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0 mt-0.5" />
-                          <span className="truncate">{item}</span>
+                    <div className="mt-6 space-y-2.5">
+                      {course.highlights.slice(0, 4).map((item, idx) => (
+                        <div key={idx} className="flex items-start gap-2.5">
+                          <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                          <span className="text-sm text-slate-300">{item}</span>
                         </div>
                       ))}
                     </div>
 
+                    {course.whatYouWillLearnLink && (
+                      <div className="mt-6">
+                        <button
+                          onClick={() => window.open(course.whatYouWillLearnLink, '_blank')}
+                          className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 rounded-xl text-blue-400 text-sm font-semibold transition-all pulse-glow-border group-hover:border-blue-400/50"
+                        >
+                          <GraduationCap className="w-4 h-4" />
+                          What you will learn
+                          <ArrowRight className="w-4 h-4 opacity-70 group-hover:opacity-100 group-hover:translate-x-1 transition-all" />
+                        </button>
+                      </div>
+                    )}
                   </div>
-                </div>
 
-                {/* Card Footer Actions */}
-                <div className="p-6 pt-0">
-                  <div className="flex items-center justify-between mb-4">
+                  {/* Card Footer Actions */}
+                  <div className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-6">
                     <div>
-                      <span className="text-2xl font-extrabold text-white font-mono">
-                        ₹{course.price.toLocaleString('en-IN')}
-                      </span>
-                      <span className="text-xs text-slate-500 line-through ml-2 font-mono">
+                      <div className="flex items-center gap-3 mb-1">
+                        <span className="text-3xl font-extrabold text-white font-mono">
+                          ₹{course.price.toLocaleString('en-IN')}
+                        </span>
+                        <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold uppercase tracking-wider">
+                          50% OFF Early Bird
+                        </span>
+                      </div>
+                      <span className="text-sm text-slate-500 line-through font-mono">
                         ₹{course.originalPrice.toLocaleString('en-IN')}
                       </span>
                     </div>
-                    <span className="text-[11px] font-mono text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/30 font-semibold">
-                      50% OFF Early Bird
-                    </span>
-                  </div>
 
-                  {isEnrolled ? (
-                    <button
-                      onClick={() => {
-                        soundFx.playWhoosh();
-                        onOpenStudentPortal('enrolled-courses');
-                      }}
-                      className="w-full py-3 px-4 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-semibold text-xs flex items-center justify-center gap-2 transition-colors"
-                      id={`enter-course-${course.id}`}
-                    >
-                      <GraduationCap className="w-4 h-4" />
-                      <span>Already Enrolled — Enter Classroom</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => {
-                        soundFx.playClick();
-                        onOpenEnroll(course);
-                      }}
-                      className="w-full py-3 px-4 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-semibold text-xs flex items-center justify-center gap-2 transition-all shadow-xs"
-                      id={`enroll-course-${course.id}`}
-                    >
-                      <span>Enroll in {course.batch.split(' ')[0]} Cohort</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  )}
+                    <div className="sm:w-auto w-full">
+                      {isEnrolled ? (
+                        <button
+                          onClick={() => {
+                            soundFx.playWhoosh();
+                            onOpenStudentPortal('enrolled-courses');
+                          }}
+                          className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 font-semibold text-sm flex items-center justify-center gap-2 transition-colors"
+                          id={`enter-course-${course.id}`}
+                        >
+                          <GraduationCap className="w-5 h-5" />
+                          <span>Enter Classroom</span>
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => {
+                            soundFx.playClick();
+                            onOpenEnroll(course);
+                          }}
+                          className="w-full sm:w-auto py-3.5 px-6 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-sm flex items-center justify-center gap-2 transition-all shadow-lg shadow-blue-600/20"
+                          id={`enroll-course-${course.id}`}
+                        >
+                          <span>Enroll Now</span>
+                          <ArrowRight className="w-5 h-5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
                 </div>
               </div>
             );
