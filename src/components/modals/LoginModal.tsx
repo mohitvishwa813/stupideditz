@@ -274,7 +274,7 @@ export const LoginModal: React.FC<LoginModalProps> = ({
             </div>
             <div>
               <span className="text-[10px] font-semibold uppercase tracking-wider text-blue-400 font-mono">
-                STUPID EDITZ MASTERCLASS
+                STUPID EDITZ
               </span>
               <h3 className="text-sm sm:text-base font-bold text-white">
                 {mode === 'signin' ? 'Sign In to Your Account' : mode === 'register' ? 'Create Student Account' : 'Reset Password'}

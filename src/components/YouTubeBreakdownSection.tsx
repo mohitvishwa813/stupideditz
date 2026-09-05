@@ -171,12 +171,31 @@ export const YouTubeBreakdownSection: React.FC<YouTubeBreakdownSectionProps> = (
 
             {/* Assets Used Box */}
             <div className="p-4 rounded-xl bg-[#141824] border border-slate-800 space-y-3">
-              <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2 font-mono">
-                <DownloadCloud className="w-4 h-4 text-emerald-400" />
-                Download Materials from This Video
-              </h4>
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-semibold uppercase tracking-wider text-slate-200 flex items-center gap-2 font-mono">
+                  <DownloadCloud className="w-4 h-4 text-emerald-400" />
+                  Download Materials from This Video
+                </h4>
+                {activeBreakdown.projectUrl && (
+                  <button
+                    onClick={() => {
+                      if (!currentUser) {
+                        soundFx.playGlitch();
+                        if (onOpenLoginModal) onOpenLoginModal();
+                        return;
+                      }
+                      soundFx.playPop();
+                      window.open(activeBreakdown.projectUrl, '_blank');
+                    }}
+                    className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-[11px] transition-colors flex items-center gap-2"
+                  >
+                    <DownloadCloud className="w-3 h-3" />
+                    Download All
+                  </button>
+                )}
+              </div>
               <div className="space-y-2">
-                {activeBreakdown.assetsUsed.map((assetId) => {
+                {activeBreakdown.assetsUsed?.map((assetId) => {
                   const asset = getAssetDetails(assetId);
                   if (!asset) return null;
                   return (

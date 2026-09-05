@@ -196,6 +196,16 @@ export const AddEditBreakdownModal: React.FC<AddEditBreakdownModalProps> = ({
                   />
                 </div>
                 <div className="md:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Project / SFX Drive URL</label>
+                  <input
+                    type="url"
+                    value={formData.projectUrl || ''}
+                    onChange={e => setFormData({ ...formData, projectUrl: e.target.value })}
+                    className="w-full bg-[#161a29] border border-slate-700/80 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-blue-500 font-mono"
+                    placeholder="https://drive.google.com/..."
+                  />
+                </div>
+                <div className="md:col-span-2">
                   <label className="block text-[11px] font-bold text-slate-400 uppercase tracking-wider mb-2">Description</label>
                   <textarea
                     rows={3}

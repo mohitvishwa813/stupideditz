@@ -70,6 +70,7 @@ export interface YouTubeBreakdown {
   views: string;
   duration: string;
   description: string;
+  projectUrl?: string;
   assetsUsed: string[]; // Asset IDs
   timelineMarkers: {
     timestamp: string;

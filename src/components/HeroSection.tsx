@@ -281,12 +281,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
         ) : null}
 
         {/* Dynamic Metric Counter Bar */}
-        <div className="mt-12 grid grid-cols-1 sm:grid-cols-3 gap-4 max-w-4xl mx-auto">
-          <div className="glass-card p-4 rounded-2xl border border-slate-700/60 text-center glass-card-hover">
-            <div className="text-2xl sm:text-3xl font-extrabold text-white font-mono">{totalDaysCount} Days</div>
-            <div className="text-xs text-slate-400 mt-1 font-medium">Live 90-Min Daily Cohort</div>
-          </div>
-
+        <div className="mt-12 grid grid-cols-1 sm:grid-cols-2 gap-4 max-w-4xl mx-auto">
           <div className="glass-card p-4 rounded-2xl border border-slate-700/60 text-center glass-card-hover">
             <div className="text-2xl sm:text-3xl font-extrabold text-emerald-400">100% Live</div>
             <div className="text-xs text-slate-400 mt-1 font-medium font-mono">Saturday Doubt Clearing</div>

@@ -63,6 +63,7 @@ export class DbService {
           views_count TEXT,
           duration TEXT,
           description TEXT,
+          project_url TEXT,
           assets_used TEXT,
           created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
@@ -323,6 +324,7 @@ export class DbService {
           views: String(r.views_count || '1M views'),
           duration: String(r.duration || '15:00'),
           description: String(r.description || ''),
+          projectUrl: r.project_url ? String(r.project_url) : '',
           assetsUsed: r.assets_used ? JSON.parse(r.assets_used) : [],
           timelineMarkers: markers
         };
@@ -337,14 +339,14 @@ export class DbService {
     try {
       await turso.execute({
         sql: `INSERT INTO youtube_breakdowns 
-          (id, title, youtube_id, video_url, thumbnail_url, views_count, duration, description, assets_used) 
-          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+          (id, title, youtube_id, video_url, thumbnail_url, views_count, duration, description, project_url, assets_used) 
+          VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
           title=excluded.title, youtube_id=excluded.youtube_id, video_url=excluded.video_url, thumbnail_url=excluded.thumbnail_url,
-          views_count=excluded.views_count, duration=excluded.duration, description=excluded.description, assets_used=excluded.assets_used`,
+          views_count=excluded.views_count, duration=excluded.duration, description=excluded.description, project_url=excluded.project_url, assets_used=excluded.assets_used`,
         args: [
           breakdown.id, breakdown.title, breakdown.youtubeId, breakdown.videoUrl, breakdown.thumbnailUrl,
-          breakdown.views, breakdown.duration, breakdown.description, JSON.stringify(breakdown.assetsUsed || [])
+          breakdown.views, breakdown.duration, breakdown.description, breakdown.projectUrl || '', JSON.stringify(breakdown.assetsUsed || [])
         ]
       });
 
@@ -392,7 +394,7 @@ export class DbService {
   static async getBundlePromo(): Promise<BundlePromo> {
     try {
       await this.initCourseTables();
-      const res = await turso.execute('SELECT * FROM bundle_promos WHERE id = "main_promo"');
+      const res = await turso.execute("SELECT * FROM bundle_promos WHERE id = 'main_promo'");
       if (res.rows.length === 0) {
         return null as any; // No bundle promo found
       }
@@ -416,7 +418,7 @@ export class DbService {
       await turso.execute({
         sql: `INSERT INTO bundle_promos 
           (id, badge_text, title, description, current_price, original_price, drive_link) 
-          VALUES ("main_promo", ?, ?, ?, ?, ?, ?)
+          VALUES ('main_promo', ?, ?, ?, ?, ?, ?)
           ON CONFLICT(id) DO UPDATE SET
           badge_text=excluded.badge_text, title=excluded.title, description=excluded.description,
           current_price=excluded.current_price, original_price=excluded.original_price, drive_link=excluded.drive_link`,
