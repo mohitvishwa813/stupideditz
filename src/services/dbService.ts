@@ -405,6 +405,7 @@ export class DbService {
       
       const r = res.rows[0] as any;
       return {
+        id: String(r.id || 'main_promo'),
         badgeText: String(r.badge_text),
         title: String(r.title),
         description: String(r.description),
@@ -448,6 +449,16 @@ export class DbService {
       if (updates.recordingUrl !== undefined) { setClauses.push('recording_url = ?'); args.push(updates.recordingUrl); }
       if (updates.status !== undefined) { setClauses.push('status = ?'); args.push(updates.status); }
       if (updates.timeIST !== undefined) { setClauses.push('time_ist = ?'); args.push(updates.timeIST); }
+      if (updates.batch !== undefined) { setClauses.push('batch_name = ?'); args.push(updates.batch); }
+      if (updates.weekNumber !== undefined) { setClauses.push('week_number = ?'); args.push(updates.weekNumber); }
+      if (updates.dayNumber !== undefined) { setClauses.push('day_number = ?'); args.push(String(updates.dayNumber)); }
+      if (updates.dayCode !== undefined) { setClauses.push('day_code = ?'); args.push(updates.dayCode); }
+      if (updates.dateFormatted !== undefined) { setClauses.push('date_formatted = ?'); args.push(updates.dateFormatted); }
+      if (updates.dateIso !== undefined) { setClauses.push('date_iso = ?'); args.push(updates.dateIso); }
+      if (updates.type !== undefined) { setClauses.push('type = ?'); args.push(updates.type); }
+      if (updates.deckUrl !== undefined) { setClauses.push('deck_url = ?'); args.push(updates.deckUrl); }
+      if (updates.filesDriveUrl !== undefined) { setClauses.push('files_drive_url = ?'); args.push(updates.filesDriveUrl); }
+      if (updates.assignmentUrl !== undefined) { setClauses.push('assignment_url = ?'); args.push(updates.assignmentUrl); }
 
       if (setClauses.length > 0) {
         args.push(id);
@@ -456,6 +467,20 @@ export class DbService {
           args
         });
       }
+
+      if (updates.subtopics !== undefined) {
+        await turso.execute({
+          sql: `DELETE FROM session_subtopics WHERE session_id = ?`,
+          args: [id]
+        });
+        for (let i = 0; i < updates.subtopics.length; i++) {
+          await turso.execute({
+            sql: `INSERT INTO session_subtopics (session_id, subtopic_text, display_order) VALUES (?, ?, ?)`,
+            args: [id, updates.subtopics[i], i + 1]
+          });
+        }
+      }
+
     } catch (err) {
       console.error('Failed to update session in Turso:', err);
     }

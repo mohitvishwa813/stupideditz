@@ -92,6 +92,23 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
     setSubtopics(updated.length > 0 ? updated : ['']);
   };
 
+  const handleDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const iso = e.target.value;
+    setDateIso(iso);
+    if (!iso) {
+      setDateFormatted('');
+      return;
+    }
+    const [y, m, d] = iso.split('-');
+    const dateObj = new Date(Number(y), Number(m) - 1, Number(d));
+    
+    const day = dateObj.toLocaleDateString('en-GB', { day: 'numeric' });
+    const month = dateObj.toLocaleDateString('en-GB', { month: 'short' });
+    const weekday = dateObj.toLocaleDateString('en-GB', { weekday: 'short' });
+    
+    setDateFormatted(`${day} ${month} (${weekday})`);
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const parts = dateFormatted.split(' ');
@@ -180,12 +197,11 @@ export const AddEditSessionModal: React.FC<AddEditSessionModalProps> = ({
               </select>
             </div>
             <div>
-              <label className="block text-xs font-bold text-stone-700 mb-1">Date Format</label>
+              <label className="block text-xs font-bold text-stone-700 mb-1">Date</label>
               <input
-                type="text"
-                placeholder="e.g. 15 Sep (Tue)"
-                value={dateFormatted}
-                onChange={(e) => setDateFormatted(e.target.value)}
+                type="date"
+                value={dateIso}
+                onChange={handleDateChange}
                 required
                 className="w-full px-3 py-2 bg-white border border-stone-300 rounded-lg outline-none focus:ring-2 focus:ring-[#c85a32]"
               />

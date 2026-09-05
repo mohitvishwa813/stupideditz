@@ -82,6 +82,7 @@ export interface YouTubeBreakdown {
 }
 
 export interface BundlePromo {
+  id: string;
   badgeText: string;
   title: string;
   description: string;

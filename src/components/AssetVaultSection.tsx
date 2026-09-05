@@ -41,8 +41,11 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   const [selectedCategory, setSelectedCategory] = useState<string>('All');
   const [searchQuery, setSearchQuery] = useState('');
   const [isProcessingBundle, setIsProcessingBundle] = useState(false);
+  const [hasJustPurchased, setHasJustPurchased] = useState(false);
 
-  const hasPurchasedBundle = bundlePromo ? currentUser?.purchasedAssets?.includes(bundlePromo.id) : false;
+  const hasPurchasedBundle = (bundlePromo ? currentUser?.purchasedAssets?.includes(bundlePromo.id) : false) || 
+    currentUser?.orderHistory?.some(o => o.itemType === 'bundle' && o.status === 'paid') || 
+    hasJustPurchased;
 
   const handlePurchaseBundle = async () => {
     if (!currentUser) {
@@ -119,12 +122,15 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
                     orderHistory: [newOrder, ...(latestUser.orderHistory || [])]
                   };
                   m.StorageService.setCurrentUser(updatedUser);
-                  window.location.reload(); 
+                  
+                  setHasJustPurchased(true);
+                  
+                  setTimeout(() => {
+                    window.open(bundlePromo.driveLink, '_blank');
+                    setTimeout(() => window.location.reload(), 500);
+                  }, 2000);
                 });
               }
-
-              // Direct them to the bundle download drive link on success
-              window.open(bundlePromo.driveLink, '_blank');
             } else {
               alert('Payment verification failed. If money was deducted, it will be refunded.');
             }

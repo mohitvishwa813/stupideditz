@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { CourseSession, StudentSubmission, UserProfile, EnrolledCourseInfo, VideoAsset, BundlePromo } from '../types';
 import { 
   Award, 
@@ -140,6 +140,37 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     currentUser?.isEnrolled && currentUser?.enrolledCourses && currentUser.enrolledCourses.length > 0
   );
 
+  // Calculate Dynamic Session Status FIRST
+  const dynamicSessions = useMemo(() => {
+    return sessions.map(session => {
+      if (!session.dateIso) return session;
+      const sessionDate = new Date(session.dateIso).setHours(0, 0, 0, 0);
+      const today = new Date().setHours(0, 0, 0, 0);
+      
+      let newStatus: 'upcoming' | 'live' | 'completed' = session.status;
+      
+      // Auto-advance logic that still respects manual overrides
+      if (sessionDate < today) {
+        newStatus = 'completed';
+      } else if (sessionDate === today && session.status === 'upcoming') {
+        newStatus = 'live';
+      } else if (sessionDate > today && session.status === 'completed') {
+        newStatus = 'completed';
+      } else if (sessionDate > today && session.status === 'live') {
+        newStatus = 'live';
+      } else if (sessionDate > today) {
+        newStatus = 'upcoming';
+      }
+
+      return { ...session, status: newStatus };
+    });
+  }, [sessions]);
+
+  // Calculate Progress globally
+  const completedCount = dynamicSessions.filter(s => s.status === 'completed').length;
+  const progressPercent = Math.round((completedCount / (dynamicSessions.length || 1)) * 100);
+  const nextSession = dynamicSessions.find(s => s.status === 'live' || s.status === 'upcoming');
+
   const enrolledCoursesList = isUserEnrolled ? (
     (currentUser.enrolledCourses || []).map((course: any) => {
       if (typeof course === 'string') {
@@ -149,15 +180,15 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
         return {
           courseId: found.id,
           courseTitle: found.title,
-          batch: 'September 2026 Live Cohort',
+          batch: currentUser.enrolledBatch || 'Active Cohort',
           enrolledDate: new Date().toLocaleDateString('en-US', { day: 'numeric', month: 'short', year: 'numeric' }),
-          progressPercent: 18,
-          completedDays: 2,
-          totalDays: found.totalDays,
-          nextSessionDay: 'Day 03',
-          nextSessionTopic: 'Cut Page Full Editing + Keyboard Shortcuts',
-          nextSessionTime: 'Upcoming 3:30 PM IST',
-          meetUrl: 'https://meet.google.com/std-edit-live',
+          progressPercent: progressPercent,
+          completedDays: completedCount,
+          totalDays: dynamicSessions.length > 0 ? dynamicSessions.length : found.totalDays,
+          nextSessionDay: nextSession ? `Day ${nextSession.dayNumber || nextSession.dayCode}` : 'Completed',
+          nextSessionTopic: nextSession ? nextSession.topic : 'Course Finished',
+          nextSessionTime: nextSession ? (nextSession.status === 'live' ? `Live Now ${nextSession.timeIST}` : `Upcoming ${nextSession.timeIST}`) : '',
+          meetUrl: nextSession ? nextSession.meetUrl : '',
           status: 'Active',
           thumbnail: found.thumbnail,
           instructor: found.instructorName
@@ -167,9 +198,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     }).filter(Boolean)
   ) : [];
 
-  // Calculate Progress
-  const completedCount = sessions.filter(s => s.status === 'completed').length;
-  const progressPercent = Math.round((completedCount / sessions.length) * 100) || 68;
+
 
   const timezoneOffset: Record<string, string> = {
     IST: '3:30 PM IST',
@@ -208,7 +237,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   };
 
   // Filtered Sessions
-  const filteredSessions = sessions.filter(s => {
+  const filteredSessions = dynamicSessions.filter(s => {
     const matchWeek = selectedWeek === 'all' || s.weekNumber === selectedWeek;
     const matchSearch = s.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
       s.agenda.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -324,43 +353,6 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </button>
             </div>
 
-            {/* 2. Sub-Headers (Shown ONLY if student is enrolled) */}
-            {isUserEnrolled && (activeTab === 'enrolled-courses' || activeTab === 'classroom' || activeTab === 'doubts' || activeTab === 'notes') && (
-              <div className="flex items-center gap-2 overflow-x-auto pb-1 pt-1 border-t border-slate-800/50">
-                <span className="text-[10px] font-mono text-slate-400 uppercase font-bold mr-1 shrink-0">Sub-Sections:</span>
-                
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab('enrolled-courses');
-                  }}
-                  className={`px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
-                    activeTab === 'enrolled-courses'
-                      ? 'bg-[#00e5a3] text-slate-950 shadow-xs'
-                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  Course Overview
-                </button>
-
-                <button
-                  onClick={() => {
-                    soundFx.playClick();
-                    setActiveTab('classroom');
-                  }}
-                  className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-bold transition-all shrink-0 ${
-                    activeTab === 'classroom'
-                      ? 'bg-[#ff5722] text-white shadow-xs'
-                      : 'bg-[#161a2c] text-slate-400 hover:text-white border border-slate-800'
-                  }`}
-                >
-                  <Calendar className="w-3.5 h-3.5" />
-                  <span>26-Day Schedule & Lessons</span>
-                </button>
-
-
-              </div>
-            )}
           </div>
         </div>
       </div>
@@ -494,15 +486,16 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           </div>
                         </div>
                       </div>
-                      <a
-                        href={course.meetUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                      <button
+                        onClick={() => {
+                          soundFx.playClick();
+                          setActiveTab('classroom');
+                        }}
                         className="px-3 py-1.5 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white text-xs font-bold shrink-0 flex items-center gap-1 transition-all"
                       >
                         <span>Join</span>
                         <ExternalLink className="w-3 h-3" />
-                      </a>
+                      </button>
                     </div>
                   </div>
 
@@ -553,10 +546,14 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
     )}
 
         {/* ============================================================ */}
-        {/* TAB 2: 26-DAY LIVE SCHEDULE & CLASSROOM */}
+        {/* TAB 2: CLASSROOM */}
         {/* ============================================================ */}
         {activeTab === 'classroom' && (
           <div className="space-y-6 animate-fadeIn" id="schedule-classroom-view">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-white flex items-center gap-2">
+              <Calendar className="w-6 h-6 text-[#ff5722]" />
+              Classroom
+            </h2>
             {/* Header with Search and Week Filters */}
             <div className="flex flex-wrap items-center justify-between gap-4 bg-[#121627] p-4 rounded-2xl border border-slate-800">
               {/* Week filter pills */}
@@ -900,7 +897,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             ) : (
               <div className="space-y-6">
-                {bundlePromo && currentUser.purchasedAssets.includes(bundlePromo.id) && (
+                {bundlePromo && (currentUser.purchasedAssets?.includes(bundlePromo.id) || currentUser.orderHistory?.some(o => o.itemType === 'bundle' && o.status === 'paid')) && (
                   <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
                     <div>
                       <span className="text-xs font-mono text-[#00e5a3] font-bold uppercase">
