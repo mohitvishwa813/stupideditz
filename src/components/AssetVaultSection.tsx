@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { VideoAsset, AssetCategory, UserProfile, BundlePromo } from '../types';
 import { 
   Download, 
@@ -46,6 +46,23 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   const hasPurchasedBundle = (bundlePromo ? currentUser?.purchasedAssets?.includes(bundlePromo.id) : false) || 
     currentUser?.orderHistory?.some(o => o.itemType === 'bundle' && o.status === 'paid') || 
     hasJustPurchased;
+
+  useEffect(() => {
+    if (window.location.hash === '#asset-vault-section' || window.location.hash === '#assets') {
+      setTimeout(() => {
+        document.getElementById('asset-vault-section')?.scrollIntoView({ behavior: 'smooth' });
+      }, 400);
+    }
+
+    const handleScroll = () => {
+      if (window.scrollY < 50 && window.location.hash) {
+        window.history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    };
+    
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
 
   const handlePurchaseBundle = async () => {
     if (!currentUser) {
@@ -366,7 +383,7 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
   };
 
   return (
-    <section className="py-16 bg-[#090a0f] border-t border-slate-800 text-slate-100 relative" id="asset-vault-section">
+    <section className="py-16 bg-[#090a0f] border-t border-slate-800 text-slate-100 relative">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-8">
         {/* Section Header */}
         <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
@@ -398,7 +415,7 @@ export const AssetVaultSection: React.FC<AssetVaultSectionProps> = ({
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none scroll-mt-28" id="asset-vault-section">
           {categories.map((cat) => (
             <button
               key={cat}

@@ -194,7 +194,7 @@ export default function App() {
               />
 
               {/* Free Sample & Creator Asset Vault */}
-              <div id="asset-vault-section">
+              <div>
                 <AssetVaultSection
                   assets={assets}
                   bundlePromo={bundlePromo}
