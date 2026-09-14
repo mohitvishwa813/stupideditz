@@ -468,33 +468,18 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                       </div>
                     </div>
 
-                    {/* Next Live Session Alert */}
-                    <div className="mt-4 p-4 rounded-2xl bg-[#171d30] border border-slate-700/80 flex items-center justify-between gap-3">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-xl bg-[#ff5722]/15 border border-[#ff5722]/30 flex items-center justify-center text-[#ff7043] shrink-0">
-                          <Video className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="text-[10px] font-mono text-[#ff7043] font-bold uppercase">
-                            Next Live Session • {course.nextSessionDay}
-                          </div>
-                          <div className="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-xs">
-                            {course.nextSessionTopic}
-                          </div>
-                          <div className="text-[10px] text-slate-400 font-mono">
-                            {course.nextSessionTime}
-                          </div>
-                        </div>
-                      </div>
+                    {/* Join Classroom Button */}
+                    <div className="mt-4">
                       <button
                         onClick={() => {
                           soundFx.playClick();
                           setActiveTab('classroom');
                         }}
-                        className="px-3 py-1.5 rounded-xl bg-[#ff5722] hover:bg-[#f4511e] text-white text-xs font-bold shrink-0 flex items-center gap-1 transition-all"
+                        className="w-full py-3.5 rounded-xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-black text-sm flex items-center justify-center gap-2 shadow-lg shadow-blue-500/25 transition-all hover:scale-[1.02]"
                       >
-                        <span>Join</span>
-                        <ExternalLink className="w-3 h-3" />
+                        <Video className="w-4 h-4" />
+                        <span>Join Live Classroom</span>
+                        <ExternalLink className="w-4 h-4 opacity-70" />
                       </button>
                     </div>
                   </div>
@@ -566,7 +551,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                       : 'bg-[#171b2d] text-slate-400 hover:text-white'
                   }`}
                 >
-                  All 26 Days
+                  All Days
                 </button>
                 {[1, 2, 3, 4, 5, 6].map(w => (
                   <button
@@ -686,6 +671,7 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                           </button>
                         )}
 
+                        {/* 
                         {!isOff && !isFuture && (
                           <button
                             onClick={() => {
@@ -701,7 +687,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
                             <FileText className="w-3.5 h-3.5" />
                             <span className="hidden sm:inline">Homework</span>
                           </button>
-                        )}
+                        )} 
+                        */}
 
                         <button
                           onClick={() => setExpandedSessionId(isExpanded ? null : session.id)}

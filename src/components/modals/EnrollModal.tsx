@@ -102,12 +102,12 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
   const handleApplyCoupon = (e: React.FormEvent) => {
     e.preventDefault();
     setCouponError('');
-    if (couponCode.trim().toUpperCase() === 'STUPID20' || couponCode.trim().toUpperCase() === 'EARLYBIRD') {
+    if (couponCode.trim().toUpperCase() === 'STUPIcccccccccccccD20' || couponCode.trim().toUpperCase() === 'EARLYBccccccccccccccccIRD') {
       soundFx.playPop();
       setCouponApplied(true);
     } else {
       soundFx.playGlitch();
-      setCouponError('Invalid promo code. Use "EARLYBIRD" for 20% OFF!');
+      setCouponError('Invalid promo code.');
     }
   };
 
@@ -668,7 +668,7 @@ export const EnrollModal: React.FC<EnrollModalProps> = ({
           <form onSubmit={handleApplyCoupon} className="flex gap-2">
             <input
               type="text"
-              placeholder="HAVE A PROMO CODE? (TRY EARLYBIRD)"
+              placeholder="HAVE A PROMO CODE?"
               value={couponCode}
               onChange={e => setCouponCode(e.target.value)}
               className="flex-1 bg-[#10131f] border border-slate-700/80 rounded-xl px-3.5 py-2 text-xs uppercase font-mono text-white placeholder-slate-500 focus:outline-none focus:border-blue-500"
