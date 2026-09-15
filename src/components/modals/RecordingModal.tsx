@@ -46,7 +46,14 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
           {isPlaying ? (
             <iframe
               className="w-full h-full"
-              src={`https://www.youtube-nocookie.com/embed/dQw4w9WgXcQ?autoplay=1&rel=0`}
+              src={(() => {
+                const url = session.recordingUrl || '';
+                const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
+                if (ytMatch && ytMatch[1]) {
+                  return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
+                }
+                return url; // fallback for google drive embeds or other links
+              })()}
               title={session.topic}
               allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
               allowFullScreen
