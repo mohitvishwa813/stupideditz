@@ -13,8 +13,6 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
   isOpen,
   onClose,
 }) => {
-  const [isPlaying, setIsPlaying] = useState(false);
-
   if (!isOpen || !session) return null;
 
   return (
@@ -43,46 +41,29 @@ export const RecordingModal: React.FC<RecordingModalProps> = ({
 
         {/* Video Area */}
         <div className="relative aspect-video bg-black flex items-center justify-center group">
-          {isPlaying ? (
-            <iframe
-              className="w-full h-full"
-              src={(() => {
-                const url = session.recordingUrl || '';
-                const ytMatch = url.match(/(?:youtu\.be\/|youtube\.com\/(?:embed\/|v\/|watch\?v=|watch\?.+&v=))([^&?]+)/);
-                if (ytMatch && ytMatch[1]) {
-                  return `https://www.youtube-nocookie.com/embed/${ytMatch[1]}?autoplay=1&rel=0`;
-                }
-                return url; // fallback for google drive embeds or other links
-              })()}
-              title={session.topic}
-              allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-              allowFullScreen
+          <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 text-center">
+            <img
+              src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80"
+              alt="Thumbnail"
+              className="absolute inset-0 w-full h-full object-cover opacity-30"
             />
-          ) : (
-            <div className="relative w-full h-full flex flex-col items-center justify-center bg-gradient-to-t from-black/90 via-black/40 to-transparent p-6 text-center">
-              <img
-                src="https://images.unsplash.com/photo-1574717024653-61fd2cf4d44d?auto=format&fit=crop&w=1200&q=80"
-                alt="Thumbnail"
-                className="absolute inset-0 w-full h-full object-cover opacity-30"
-              />
-              <button
-                onClick={() => setIsPlaying(true)}
-                className="relative z-10 w-20 h-20 bg-[#c85a32] hover:bg-[#b54a24] text-white rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-105 active:scale-95 mb-4 group-hover:ring-4 group-hover:ring-[#c85a32]/40"
-              >
-                <Play className="w-8 h-8 fill-current ml-1" />
-              </button>
-              <p className="relative z-10 text-sm font-medium text-stone-300 max-w-md">
-                Click to stream class recording (1080p 60fps). Includes raw DaVinci Resolve project screen share & timeline scrubbing.
-              </p>
-              <div className="relative z-10 flex items-center gap-4 mt-3 text-xs text-stone-400">
-                <span className="flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-[#c85a32]" /> {session.durationMinutes} mins
-                </span>
-                <span>•</span>
-                <span>Instructor: Arjun Rajput (Stupid Editz)</span>
-              </div>
+            <button
+              onClick={() => window.open(session.recordingUrl, '_blank')}
+              className="relative z-10 w-20 h-20 bg-[#c85a32] hover:bg-[#b54a24] text-white rounded-full flex items-center justify-center shadow-lg transform transition-transform hover:scale-105 active:scale-95 mb-4 group-hover:ring-4 group-hover:ring-[#c85a32]/40"
+            >
+              <Play className="w-8 h-8 fill-current ml-1" />
+            </button>
+            <p className="relative z-10 text-sm font-medium text-stone-300 max-w-md">
+              Click to open class recording in a new tab. Includes raw DaVinci Resolve project screen share & timeline scrubbing.
+            </p>
+            <div className="relative z-10 flex items-center gap-4 mt-3 text-xs text-stone-400">
+              <span className="flex items-center gap-1">
+                <Clock className="w-3.5 h-3.5 text-[#c85a32]" /> {session.durationMinutes} mins
+              </span>
+              <span>•</span>
+              <span>Instructor: Arjun Rajput (Stupid Editz)</span>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Bottom Details & Links */}
