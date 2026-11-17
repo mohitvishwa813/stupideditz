@@ -9,7 +9,8 @@ import {
   Course,
   EnrolledCourseInfo,
   SessionType,
-  HeroShowcaseOption
+  HeroShowcaseOption,
+  RecordedBundle
 } from '../types';
 import { INITIAL_SESSIONS, INITIAL_ASSETS, INITIAL_YOUTUBE_BREAKDOWNS, INITIAL_STUDENTS, INITIAL_HERO_OPTIONS } from '../data/initialData';
 import { COURSES_CATALOG, DEFAULT_ENROLLED_COURSES } from '../data/coursesData';
@@ -94,6 +95,33 @@ export class DbService {
           updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
       `);
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS recorded_bundles (
+          id TEXT PRIMARY KEY,
+          title TEXT NOT NULL,
+          subtitle TEXT,
+          description TEXT,
+          price REAL NOT NULL,
+          original_price REAL,
+          thumbnail TEXT,
+          drive_link TEXT NOT NULL,
+          total_hours TEXT,
+          total_sessions_count INTEGER DEFAULT 26,
+          badge_text TEXT DEFAULT 'FULL RECORDED COLLECTION',
+          is_published INTEGER DEFAULT 1,
+          updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+      `);
+
+      await turso.execute(`
+        CREATE TABLE IF NOT EXISTS recorded_bundle_highlights (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          bundle_id TEXT NOT NULL,
+          highlight_text TEXT NOT NULL,
+          display_order INTEGER DEFAULT 1
+        )
+      `);
     } catch (e) {
       console.warn('Turso tables initialization note:', e);
     }
@@ -146,6 +174,7 @@ export class DbService {
           instructorRole: String(r.instructor_role || 'Lead Documentary Editor'),
           instructorAvatar: String(r.instructor_avatar || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80'),
           isPopular: Boolean(r.is_popular),
+          isPublished: r.is_published !== undefined && r.is_published !== null ? Boolean(r.is_published) : true,
           whatYouWillLearnLink: r.what_you_will_learn_link ? String(r.what_you_will_learn_link) : undefined
         };
       });
@@ -181,6 +210,7 @@ export class DbService {
             instructor_name = ?,
             instructor_role = ?,
             is_popular = ?,
+            is_published = ?,
             what_you_will_learn_link = ?
           WHERE id = ?`,
           args: [
@@ -195,6 +225,7 @@ export class DbService {
             course.instructorName || 'Arjun Rajput',
             course.instructorRole || 'Lead Editor',
             course.isPopular ? 1 : 0,
+            course.isPublished !== undefined ? (course.isPublished ? 1 : 0) : 1,
             course.whatYouWillLearnLink || null,
             targetId
           ]
@@ -203,7 +234,7 @@ export class DbService {
         await turso.execute({
           sql: `INSERT INTO courses (
             id, title, subtitle, description, batch_name, price, original_price, rating, level, thumbnail_url, instructor_name, instructor_role, is_popular, is_published, what_you_will_learn_link
-          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, ?)`,
+          ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
           args: [
             course.id,
             course.title,
@@ -218,6 +249,7 @@ export class DbService {
             course.instructorName || 'Arjun Rajput',
             course.instructorRole || 'Lead Editor',
             course.isPopular ? 1 : 0,
+            course.isPublished !== undefined ? (course.isPublished ? 1 : 0) : 1,
             course.whatYouWillLearnLink || null
           ]
         });
@@ -255,6 +287,21 @@ export class DbService {
       return true;
     } catch (err) {
       console.warn('Failed deleting course from Turso DB:', err);
+      return false;
+    }
+  }
+
+  // Toggle Publish / Hide status of a Course
+  static async toggleCoursePublish(courseId: string, isPublished: boolean): Promise<boolean> {
+    try {
+      await this.initCourseTables();
+      await turso.execute({
+        sql: `UPDATE courses SET is_published = ? WHERE id = ? OR id = CAST(? AS INTEGER)`,
+        args: [isPublished ? 1 : 0, courseId, isNaN(Number(courseId)) ? -99999 : Number(courseId)]
+      });
+      return true;
+    } catch (err) {
+      console.warn('Failed toggling course publish in Turso DB:', err);
       return false;
     }
   }
@@ -390,6 +437,158 @@ export class DbService {
       return true;
     } catch (e) {
       console.error('Error deleting youtube breakdown from DB', e);
+      return false;
+    }
+  }
+
+  // Recorded Bundles Collection (Masterclass Recorded Editions)
+  static async getRecordedBundles(): Promise<RecordedBundle[]> {
+    try {
+      await this.initCourseTables();
+      const res = await turso.execute('SELECT * FROM recorded_bundles ORDER BY updated_at DESC');
+      if (res.rows.length === 0) {
+        // Return default starter bundle if none created yet
+        return [{
+          id: 'bundle-recorded-masterclass-26',
+          title: 'DaVinci Resolve: Complete 26-Day Recorded Masterclass Archive',
+          subtitle: 'Instant Lifetime Access to all 26 recorded cohort live sessions, raw practice timelines, sound library, and project files.',
+          description: 'Cannot attend the live 3:30 PM IST cohort? Get instant access to the complete 26-day recorded collection. Includes all raw .drfx Fusion node files, Fairlight master audio stems, documentary grading timelines, and homework assignments.',
+          price: 2499,
+          originalPrice: 4999,
+          thumbnail: 'https://ik.imagekit.io/icyqvq18nj/ChatGPT%20Image%20Sep%2026,%202026,%2003_23_40%20AM.png?updatedAt=1790373254706',
+          driveLink: 'https://drive.google.com/drive/folders/stupideditz-recorded-masterclass-archive',
+          totalHours: '40+ Hours',
+          totalSessionsCount: 26,
+          badgeText: 'INSTANT ACCESS ARCHIVE',
+          isPublished: true,
+          highlights: [
+            'All 26 Daily Class Recordings in 1080p 60FPS (Full Uncut)',
+            'Full 40GB+ Sound Packs, Film Grains & 3D LUTs Included',
+            'All Raw Practice Footage & DaVinci .dra Project Archives',
+            'Lifetime Drive Access with Continuous Timeline Updates',
+            'Automatically Added to Your Student Asset Vault on Purchase'
+          ]
+        }];
+      }
+
+      const highlightsRes = await turso.execute('SELECT * FROM recorded_bundle_highlights ORDER BY display_order ASC');
+
+      return res.rows.map((r: any) => {
+        const bundleId = String(r.id);
+        const highlights = highlightsRes.rows
+          .filter((h: any) => String(h.bundle_id) === bundleId)
+          .map((h: any) => String(h.highlight_text));
+
+        return {
+          id: bundleId,
+          title: String(r.title),
+          subtitle: String(r.subtitle || ''),
+          description: String(r.description || ''),
+          price: Number(r.price || 0),
+          originalPrice: Number(r.original_price || (r.price ? r.price * 2 : 0)),
+          thumbnail: String(r.thumbnail || 'https://ik.imagekit.io/icyqvq18nj/ChatGPT%20Image%20Sep%2026,%202026,%2003_23_40%20AM.png?updatedAt=1790373254706'),
+          driveLink: String(r.drive_link || ''),
+          totalHours: String(r.total_hours || '40+ Hours'),
+          totalSessionsCount: Number(r.total_sessions_count || 26),
+          badgeText: String(r.badge_text || 'RECORDED ARCHIVE'),
+          isPublished: r.is_published !== undefined && r.is_published !== null ? Boolean(r.is_published) : true,
+          highlights: highlights.length > 0 ? highlights : [
+            'All 26 Daily Class Recordings in 1080p 60FPS',
+            'Includes All 40GB+ Practice Assets & Timelines',
+            'Instant Google Drive Access directly in Student Asset Vault'
+          ]
+        };
+      });
+    } catch (err) {
+      console.warn('Failed to load recorded bundles from DB:', err);
+      return [];
+    }
+  }
+
+  static async saveRecordedBundleToDb(bundle: RecordedBundle): Promise<boolean> {
+    try {
+      await this.initCourseTables();
+      await turso.execute({
+        sql: `INSERT INTO recorded_bundles (
+          id, title, subtitle, description, price, original_price, thumbnail, drive_link, total_hours, total_sessions_count, badge_text, is_published, updated_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
+        ON CONFLICT(id) DO UPDATE SET
+          title = excluded.title,
+          subtitle = excluded.subtitle,
+          description = excluded.description,
+          price = excluded.price,
+          original_price = excluded.original_price,
+          thumbnail = excluded.thumbnail,
+          drive_link = excluded.drive_link,
+          total_hours = excluded.total_hours,
+          total_sessions_count = excluded.total_sessions_count,
+          badge_text = excluded.badge_text,
+          is_published = excluded.is_published,
+          updated_at = CURRENT_TIMESTAMP`,
+        args: [
+          bundle.id,
+          bundle.title,
+          bundle.subtitle || '',
+          bundle.description || '',
+          bundle.price,
+          bundle.originalPrice || bundle.price * 2,
+          bundle.thumbnail || '',
+          bundle.driveLink,
+          bundle.totalHours || '40+ Hours',
+          bundle.totalSessionsCount || 26,
+          bundle.badgeText || 'RECORDED COLLECTION',
+          bundle.isPublished !== false ? 1 : 0
+        ]
+      });
+
+      // Save highlights
+      if (bundle.highlights && bundle.highlights.length > 0) {
+        await turso.execute({
+          sql: 'DELETE FROM recorded_bundle_highlights WHERE bundle_id = ?',
+          args: [bundle.id]
+        });
+        for (let i = 0; i < bundle.highlights.length; i++) {
+          await turso.execute({
+            sql: 'INSERT INTO recorded_bundle_highlights (bundle_id, highlight_text, display_order) VALUES (?, ?, ?)',
+            args: [bundle.id, bundle.highlights[i], i + 1]
+          });
+        }
+      }
+
+      return true;
+    } catch (err) {
+      console.error('Failed saving recorded bundle to DB:', err);
+      return false;
+    }
+  }
+
+  static async toggleRecordedBundlePublish(bundleId: string, isPublished: boolean): Promise<boolean> {
+    try {
+      await this.initCourseTables();
+      await turso.execute({
+        sql: 'UPDATE recorded_bundles SET is_published = ? WHERE id = ?',
+        args: [isPublished ? 1 : 0, bundleId]
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed toggling recorded bundle publish:', err);
+      return false;
+    }
+  }
+
+  static async deleteRecordedBundleFromDb(bundleId: string): Promise<boolean> {
+    try {
+      await turso.execute({
+        sql: 'DELETE FROM recorded_bundle_highlights WHERE bundle_id = ?',
+        args: [bundleId]
+      });
+      await turso.execute({
+        sql: 'DELETE FROM recorded_bundles WHERE id = ?',
+        args: [bundleId]
+      });
+      return true;
+    } catch (err) {
+      console.error('Failed deleting recorded bundle from DB:', err);
       return false;
     }
   }

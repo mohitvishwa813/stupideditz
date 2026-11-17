@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { CourseSession, StudentSubmission, UserProfile, EnrolledCourseInfo, VideoAsset, BundlePromo } from '../types';
+import { CourseSession, StudentSubmission, UserProfile, EnrolledCourseInfo, VideoAsset, BundlePromo, RecordedBundle } from '../types';
 import { 
   Award, 
   MessageSquare, 
@@ -59,6 +59,7 @@ interface StudentPortalProps {
   initialTab?: 'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'orders' | 'account';
   assets?: VideoAsset[];
   bundlePromo?: BundlePromo | null;
+  recordedBundles?: RecordedBundle[];
 }
 
 export const StudentPortal: React.FC<StudentPortalProps> = ({
@@ -71,7 +72,8 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
   onUpdateUser,
   initialTab = 'enrolled-courses',
   assets = [],
-  bundlePromo = null
+  bundlePromo = null,
+  recordedBundles = []
 }) => {
   const [activeTab, setActiveTab] = useState<'enrolled-courses' | 'classroom' | 'doubts' | 'assets' | 'assignments' | 'mock-test' | 'notes' | 'orders' | 'account'>(initialTab);
   const [selectedWeek, setSelectedWeek] = useState<number | 'all'>('all');
@@ -884,6 +886,49 @@ export const StudentPortal: React.FC<StudentPortalProps> = ({
               </div>
             ) : (
               <div className="space-y-6">
+                {/* Purchased Recorded Masterclass Bundles */}
+                {recordedBundles.filter(rb => 
+                  currentUser.purchasedAssets?.includes(rb.id) || 
+                  currentUser.orderHistory?.some(o => o.itemId === rb.id && o.status === 'paid')
+                ).map(rb => (
+                  <div key={rb.id} className="bg-gradient-to-r from-purple-950/40 via-[#141226] to-[#121627] p-6 rounded-3xl border border-purple-500/40 flex flex-wrap items-center justify-between gap-6 shadow-xl relative overflow-hidden">
+                    <div className="flex items-center gap-4 max-w-xl">
+                      <img 
+                        src={rb.thumbnail} 
+                        alt={rb.title} 
+                        className="w-20 h-20 sm:w-24 sm:h-24 rounded-2xl object-cover ring-1 ring-purple-500/40 shrink-0" 
+                      />
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="px-2.5 py-0.5 rounded-full bg-purple-500/20 text-purple-300 text-[10px] font-mono font-bold uppercase tracking-wide border border-purple-500/30">
+                            {rb.badgeText || 'PURCHASED BUNDLE'}
+                          </span>
+                          <span className="text-[11px] font-mono text-slate-400">
+                            {rb.totalHours || '40+ Hours'} • {rb.totalSessionsCount || 26} Sessions
+                          </span>
+                        </div>
+                        <h2 className="text-lg sm:text-xl font-extrabold text-white leading-snug">
+                          {rb.title}
+                        </h2>
+                        <p className="text-xs text-slate-400 mt-1 line-clamp-2">
+                          {rb.subtitle || rb.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <a
+                      href={rb.driveLink}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-black text-xs flex items-center gap-2 transition-all shadow-lg shadow-purple-600/30"
+                    >
+                      <Download className="w-4 h-4" />
+                      <span>Open Drive Archive</span>
+                      <ExternalLink className="w-3.5 h-3.5 opacity-80" />
+                    </a>
+                  </div>
+                ))}
+
                 {bundlePromo && (currentUser.purchasedAssets?.includes(bundlePromo.id) || currentUser.orderHistory?.some(o => o.itemType === 'bundle' && o.status === 'paid')) && (
                   <div className="bg-[#121627] p-6 rounded-3xl border border-slate-800 flex flex-wrap items-center justify-between gap-4">
                     <div>

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption, YouTubeBreakdown, BundlePromo } from '../types';
+import { CourseSession, RegisteredStudent, StudentSubmission, VideoAsset, UserProfile, Course, HeroShowcaseOption, YouTubeBreakdown, BundlePromo, RecordedBundle } from '../types';
 import { StorageService } from '../services/storageService';
 import { DbService } from '../services/dbService';
 
@@ -35,7 +35,9 @@ import {
   GraduationCap,
   BookOpen,
   Tv,
-  Save
+  Save,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { soundFx } from '../utils/soundEffects';
 import { AddEditSessionModal } from './modals/AddEditSessionModal';
@@ -44,6 +46,7 @@ import { EditStudentModal } from './modals/EditStudentModal';
 import { EditAssetModal } from './modals/EditAssetModal';
 import { AddEditCourseModal } from './modals/AddEditCourseModal';
 import { AddEditBreakdownModal } from './modals/AddEditBreakdownModal';
+import { AddEditRecordedBundleModal } from './modals/AddEditRecordedBundleModal';
 import confetti from 'canvas-confetti';
 
 interface AdminConsoleProps {
@@ -62,6 +65,8 @@ interface AdminConsoleProps {
   onUpdateYoutubeBreakdowns?: (breakdowns: YouTubeBreakdown[]) => void;
   bundlePromo?: BundlePromo;
   onUpdateBundlePromo?: (promo: BundlePromo) => void;
+  recordedBundles?: RecordedBundle[];
+  onUpdateRecordedBundles?: (bundles: RecordedBundle[]) => void;
 }
 
 export const AdminConsole: React.FC<AdminConsoleProps> = ({
@@ -80,8 +85,10 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   onUpdateYoutubeBreakdowns,
   bundlePromo,
   onUpdateBundlePromo,
+  recordedBundles = [],
+  onUpdateRecordedBundles
 }) => {
-  const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'hero' | 'promos'>('schedule');
+  const [activeTab, setActiveTab] = useState<'schedule' | 'students' | 'assets' | 'courses' | 'recorded-bundles' | 'hero' | 'promos'>('schedule');
   const [heroOptionsList, setHeroOptionsList] = useState<HeroShowcaseOption[]>(
     heroOptions
   );
@@ -101,6 +108,53 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
   // Course Modals & Actions
   const [isCourseModalOpen, setIsCourseModalOpen] = useState(false);
   const [courseToEdit, setCourseToEdit] = useState<Course | null>(null);
+
+  // Recorded Bundle Modals & Actions
+  const [isRecordedBundleModalOpen, setIsRecordedBundleModalOpen] = useState(false);
+  const [recordedBundleToEdit, setRecordedBundleToEdit] = useState<RecordedBundle | null>(null);
+
+  const handleSaveRecordedBundle = async (bundle: RecordedBundle) => {
+    soundFx.playClick();
+    if (onUpdateRecordedBundles) {
+      let updatedList = [...recordedBundles];
+      const existingIdx = updatedList.findIndex(b => b.id === bundle.id);
+      if (existingIdx >= 0) {
+        updatedList[existingIdx] = bundle;
+      } else {
+        updatedList.unshift(bundle);
+      }
+      onUpdateRecordedBundles(updatedList);
+      await DbService.saveRecordedBundleToDb(bundle);
+      const fresh = await DbService.getRecordedBundles();
+      onUpdateRecordedBundles(fresh);
+      confetti({ particleCount: 50, spread: 70, origin: { y: 0.6 } });
+    }
+  };
+
+  const handleToggleRecordedBundlePublish = async (bundle: RecordedBundle) => {
+    soundFx.playClick();
+    const newStatus = bundle.isPublished === false ? true : false;
+    if (onUpdateRecordedBundles) {
+      const updated = { ...bundle, isPublished: newStatus };
+      const updatedList = recordedBundles.map(b => b.id === bundle.id ? updated : b);
+      onUpdateRecordedBundles(updatedList);
+      await DbService.toggleRecordedBundlePublish(bundle.id, newStatus);
+      const fresh = await DbService.getRecordedBundles();
+      onUpdateRecordedBundles(fresh);
+    }
+  };
+
+  const handleDeleteRecordedBundle = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this recorded session bundle?')) {
+      soundFx.playPop();
+      if (onUpdateRecordedBundles) {
+        onUpdateRecordedBundles(recordedBundles.filter(b => b.id !== id));
+        await DbService.deleteRecordedBundleFromDb(id);
+        const fresh = await DbService.getRecordedBundles();
+        onUpdateRecordedBundles(fresh);
+      }
+    }
+  };
 
   // Breakdown Modals & Actions
   const [isBreakdownModalOpen, setIsBreakdownModalOpen] = useState(false);
@@ -163,6 +217,21 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
       const liveCourses = await DbService.getCourses();
       onUpdateCourses(liveCourses);
     }
+  };
+
+  const handleToggleCoursePublish = async (course: Course) => {
+    soundFx.playClick();
+    const newStatus = course.isPublished === false ? true : false;
+    
+    // Optimistically update local storage & state
+    const updated = { ...course, isPublished: newStatus };
+    const updatedList = StorageService.addCourse(updated);
+    onUpdateCourses(updatedList);
+
+    // Persist to Turso
+    await DbService.toggleCoursePublish(course.id, newStatus);
+    const liveCourses = await DbService.getCourses();
+    onUpdateCourses(liveCourses);
   };
 
   // Submissions and Students state
@@ -446,6 +515,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             {[
               { id: 'schedule', label: 'Class Curriculum Studio', icon: Calendar },
               { id: 'courses', label: 'Masterclass Course Cards', icon: BookOpen },
+              { id: 'recorded-bundles', label: 'Recorded Session Bundles', icon: Video },
               { id: 'students', label: 'Student Directory & CRM', icon: Users },
               { id: 'assets', label: 'Asset Vault Catalog', icon: FolderOpen },
               { id: 'hero', label: 'Hero Showcase Options', icon: Tv },
@@ -828,6 +898,7 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                       <th className="py-3 px-4">Level</th>
                       <th className="py-3 px-4">Offer Price</th>
                       <th className="py-3 px-4">Instructor</th>
+                      <th className="py-3 px-4 text-center">Visibility</th>
                       <th className="py-3 px-4 text-right">Actions</th>
                     </tr>
                   </thead>
@@ -873,6 +944,29 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         <td className="py-3.5 px-4 text-slate-300">
                           {course.instructorName}
                         </td>
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            onClick={() => handleToggleCoursePublish(course)}
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                              course.isPublished !== false
+                                ? 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/25'
+                                : 'bg-slate-700/30 text-slate-400 border-slate-700/50 hover:bg-slate-700/50'
+                            }`}
+                            title={course.isPublished !== false ? 'Click to Hide from Landing Page' : 'Click to Unhide (Show on Landing Page)'}
+                          >
+                            {course.isPublished !== false ? (
+                              <>
+                                <Eye className="w-3.5 h-3.5" />
+                                <span>Visible</span>
+                              </>
+                            ) : (
+                              <>
+                                <EyeOff className="w-3.5 h-3.5" />
+                                <span>Hidden</span>
+                              </>
+                            )}
+                          </button>
+                        </td>
                         <td className="py-3.5 px-4 text-right">
                           <div className="flex items-center justify-end gap-2">
                             <button
@@ -912,6 +1006,147 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
                         </td>
                       </tr>
                     ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB: RECORDED SESSION BUNDLES CMS */}
+        {activeTab === 'recorded-bundles' && (
+          <div className="mt-6 space-y-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div>
+                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                  <Video className="w-5 h-5 text-purple-400" />
+                  Recorded Session Collection Bundles
+                </h3>
+                <p className="text-xs text-slate-400">
+                  Manage the full recorded batch editions. When a student purchases this bundle, it unlocks instant access directly inside their Student Asset Vault.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  setRecordedBundleToEdit(null);
+                  setIsRecordedBundleModalOpen(true);
+                }}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-md transition-all shrink-0"
+              >
+                <Plus className="w-4 h-4" />
+                <span>Create Recorded Bundle</span>
+              </button>
+            </div>
+
+            <div className="bg-[#111422] border border-slate-800 rounded-2xl overflow-hidden shadow-xl">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#161a2b] text-slate-400 font-mono uppercase tracking-wider border-b border-slate-800">
+                      <th className="py-3 px-4">Bundle Title</th>
+                      <th className="py-3 px-4">Offer Price</th>
+                      <th className="py-3 px-4">Drive Link</th>
+                      <th className="py-3 px-4">Content</th>
+                      <th className="py-3 px-4 text-center">Visibility</th>
+                      <th className="py-3 px-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-800/80 text-slate-200">
+                    {recordedBundles.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="text-center py-8 text-slate-500">
+                          No recorded bundles created yet. Click "Create Recorded Bundle" to add one!
+                        </td>
+                      </tr>
+                    ) : (
+                      recordedBundles.map(bundle => (
+                        <tr key={bundle.id} className="hover:bg-[#151928] transition-colors">
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-3">
+                              <img
+                                src={bundle.thumbnail}
+                                alt={bundle.title}
+                                className="w-12 h-8 rounded-lg object-cover bg-slate-900 border border-slate-700/60 shrink-0"
+                              />
+                              <div>
+                                <div className="font-bold text-white">
+                                  {bundle.title}
+                                </div>
+                                <div className="text-[11px] text-slate-400 truncate max-w-xs">{bundle.subtitle}</div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono font-bold text-purple-400">
+                            ₹{bundle.price.toLocaleString('en-IN')}
+                            {bundle.originalPrice && (
+                              <span className="text-[10px] text-slate-500 line-through ml-1 font-normal">
+                                ₹{bundle.originalPrice.toLocaleString('en-IN')}
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 max-w-xs truncate">
+                            <a 
+                              href={bundle.driveLink} 
+                              target="_blank" 
+                              rel="noreferrer" 
+                              className="text-blue-400 hover:underline flex items-center gap-1 font-mono text-[11px]"
+                            >
+                              <Link2 className="w-3 h-3 shrink-0" />
+                              <span className="truncate">{bundle.driveLink}</span>
+                            </a>
+                          </td>
+                          <td className="py-3.5 px-4 font-mono text-slate-300">
+                            {bundle.totalHours || '40+ Hours'} • {bundle.totalSessionsCount || 26} Classes
+                          </td>
+                          <td className="py-3.5 px-4 text-center">
+                            <button
+                              onClick={() => handleToggleRecordedBundlePublish(bundle)}
+                              className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold border transition-all ${
+                                bundle.isPublished !== false
+                                  ? 'bg-purple-500/15 text-purple-300 border-purple-500/30 hover:bg-purple-500/25'
+                                  : 'bg-slate-700/30 text-slate-400 border-slate-700/50 hover:bg-slate-700/50'
+                              }`}
+                            >
+                              {bundle.isPublished !== false ? (
+                                <>
+                                  <Eye className="w-3.5 h-3.5" />
+                                  <span>Visible</span>
+                                </>
+                              ) : (
+                                <>
+                                  <EyeOff className="w-3.5 h-3.5" />
+                                  <span>Hidden</span>
+                                </>
+                              )}
+                            </button>
+                          </td>
+                          <td className="py-3.5 px-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <button
+                                onClick={() => {
+                                  soundFx.playClick();
+                                  setRecordedBundleToEdit(bundle);
+                                  setIsRecordedBundleModalOpen(true);
+                                }}
+                                className="p-1.5 text-purple-400 hover:text-white hover:bg-purple-600/20 rounded-lg transition-colors"
+                                title="Edit Bundle"
+                              >
+                                <Edit3 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteRecordedBundle(bundle.id)}
+                                className="p-1.5 text-rose-400 hover:text-white hover:bg-rose-600/20 rounded-lg transition-colors"
+                                title="Delete Bundle"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -1290,6 +1525,19 @@ export const AdminConsole: React.FC<AdminConsoleProps> = ({
             setBreakdownToEdit(null);
           }}
           onSave={handleSaveBreakdown}
+        />
+      )}
+
+      {/* Add / Edit Recorded Bundle Modal */}
+      {isRecordedBundleModalOpen && (
+        <AddEditRecordedBundleModal
+          isOpen={isRecordedBundleModalOpen}
+          bundleToEdit={recordedBundleToEdit}
+          onClose={() => {
+            setIsRecordedBundleModalOpen(false);
+            setRecordedBundleToEdit(null);
+          }}
+          onSave={handleSaveRecordedBundle}
         />
       )}
     </div>

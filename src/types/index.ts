@@ -91,6 +91,23 @@ export interface BundlePromo {
   driveLink: string;
 }
 
+export interface RecordedBundle {
+  id: string;
+  title: string;
+  subtitle: string;
+  description: string;
+  price: number;
+  originalPrice: number;
+  thumbnail: string;
+  driveLink: string;
+  totalHours?: string;
+  totalSessionsCount?: number;
+  highlights: string[];
+  features?: string[];
+  badgeText?: string;
+  isPublished?: boolean;
+}
+
 export interface StudentSubmission {
   id: string;
   sessionId: string;
@@ -162,6 +179,7 @@ export interface Course {
   instructorRole: string;
   instructorAvatar: string;
   isPopular?: boolean;
+  isPublished?: boolean;
   whatYouWillLearnLink?: string;
 }
 

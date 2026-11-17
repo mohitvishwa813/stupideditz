@@ -5,13 +5,14 @@
 
 import React, { useState, useEffect } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
-import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption, BundlePromo } from './types';
+import { CourseSession, VideoAsset, YouTubeBreakdown, UserProfile, Course, HeroShowcaseOption, BundlePromo, RecordedBundle } from './types';
 
 import { StorageService, DEFAULT_STUDENT_USER, DEFAULT_ADMIN_USER, GUEST_USER } from './services/storageService';
 import { DbService } from './services/dbService';
 import { Navbar } from './components/Navbar';
 import { HeroSection } from './components/HeroSection';
 import { CoursesSection } from './components/CoursesSection';
+import { RecordedBundlesSection } from './components/RecordedBundlesSection';
 import { AssetVaultSection } from './components/AssetVaultSection';
 import { YouTubeBreakdownSection } from './components/YouTubeBreakdownSection';
 import { CurriculumOverview } from './components/CurriculumOverview';
@@ -31,6 +32,7 @@ export default function App() {
   const [youtubeBreakdowns, setYoutubeBreakdowns] = useState<YouTubeBreakdown[]>([]);
   const [bundlePromo, setBundlePromo] = useState<BundlePromo | null>(null);
   const [courses, setCourses] = useState<Course[]>([]);
+  const [recordedBundles, setRecordedBundles] = useState<RecordedBundle[]>([]);
   const [heroOptions, setHeroOptions] = useState<HeroShowcaseOption[]>([]);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(() => StorageService.getCurrentUser());
   
@@ -45,14 +47,15 @@ export default function App() {
     let isMounted = true;
     async function loadTursoData() {
       try {
-        const [dbSessions, dbBreakdowns, dbPromo, dbCourses, dbStudents, dbAssets, dbHeroOptions] = await Promise.all([
+        const [dbSessions, dbBreakdowns, dbPromo, dbCourses, dbStudents, dbAssets, dbHeroOptions, dbBundles] = await Promise.all([
           DbService.getSessions(),
           DbService.getYouTubeBreakdowns(),
           DbService.getBundlePromo(),
           DbService.getCourses(),
           DbService.getStudents(),
           DbService.getAssets(),
-          DbService.getHeroOptions()
+          DbService.getHeroOptions(),
+          DbService.getRecordedBundles()
         ]);
         if (isMounted) {
           if (dbSessions) setSessions(dbSessions);
@@ -61,6 +64,7 @@ export default function App() {
           if (dbCourses) setCourses(dbCourses);
           if (dbAssets) setAssets(dbAssets);
           if (dbHeroOptions) setHeroOptions(dbHeroOptions);
+          if (dbBundles) setRecordedBundles(dbBundles);
         }
       } catch (err) {
         console.warn('Failed loading data from Turso, using local defaults:', err);
@@ -171,6 +175,7 @@ export default function App() {
               <HeroSection
                 sessionsCount={sessions.length}
                 heroOptions={heroOptions}
+                hasPublishedCourses={courses.some(c => c.isPublished !== false)}
                 onExploreCurriculum={() => {
                   const elem = document.getElementById('courses-section');
                   if (elem) elem.scrollIntoView({ behavior: 'smooth' });
@@ -191,6 +196,14 @@ export default function App() {
                 onOpenEnroll={(courseId) => handleOpenEnrollModal(courseId)}
                 onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'enrolled-courses')}
                 currentUser={currentUser}
+              />
+
+              {/* Recorded Session Collection Bundles Section */}
+              <RecordedBundlesSection
+                bundles={recordedBundles}
+                currentUser={currentUser}
+                onOpenLoginModal={() => setIsLoginModalOpen(true)}
+                onOpenStudentPortal={(tab) => handleNavigate('student-portal', tab || 'assets')}
               />
 
               {/* Free Sample & Creator Asset Vault */}
@@ -251,6 +264,7 @@ export default function App() {
                 onUpdateUser={(updated) => setCurrentUser(updated)}
                 assets={assets}
                 bundlePromo={bundlePromo}
+                recordedBundles={recordedBundles}
               />
             ) : (
               <Navigate to="/" replace />
@@ -276,6 +290,8 @@ export default function App() {
                 onUpdateYoutubeBreakdowns={(b) => setYoutubeBreakdowns(b)}
                 bundlePromo={bundlePromo}
                 onUpdateBundlePromo={(p) => setBundlePromo(p)}
+                recordedBundles={recordedBundles}
+                onUpdateRecordedBundles={(b) => setRecordedBundles(b)}
               />
             ) : (
               <Navigate to="/" replace />

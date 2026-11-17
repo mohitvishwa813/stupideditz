@@ -33,6 +33,7 @@ interface HeroSectionProps {
   currentUser: UserProfile | null;
   sessionsCount?: number;
   heroOptions?: HeroShowcaseOption[];
+  hasPublishedCourses?: boolean;
 }
 
 export const HeroSection: React.FC<HeroSectionProps> = ({
@@ -42,7 +43,8 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
   onOpenEnroll,
   currentUser,
   sessionsCount,
-  heroOptions
+  heroOptions,
+  hasPublishedCourses = true
 }) => {
   // Compute total cohort days dynamically from database sessions list
   const totalDaysCount = sessionsCount && sessionsCount > 0 ? sessionsCount : 26;
@@ -108,7 +110,7 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 Go to My Enrolled Courses
                 <ArrowRight className="w-4 h-4" />
               </button>
-            ) : (
+            ) : hasPublishedCourses ? (
               <button
                 onClick={() => {
                   soundFx.playWhoosh();
@@ -118,22 +120,24 @@ export const HeroSection: React.FC<HeroSectionProps> = ({
                 id="hero-enroll-cta"
               >
                 <Flame className="w-5 h-5 text-blue-200" />
-                Enroll in September Cohort
+                Enroll in Cohort
                 <ArrowRight className="w-4 h-4" />
               </button>
-            )}
+            ) : null}
 
-            <button
-              onClick={() => {
-                soundFx.playClick();
-                onExploreCurriculum();
-              }}
-              className="px-6 py-3.5 rounded-xl bg-[#141826] hover:bg-[#1c2236] text-slate-200 hover:text-white border border-slate-700/80 font-semibold text-sm sm:text-base transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
-              id="hero-curriculum-btn"
-            >
-              <Calendar className="w-4 h-4 text-blue-400" />
-              Explore Cohort Courses
-            </button>
+            {hasPublishedCourses && (
+              <button
+                onClick={() => {
+                  soundFx.playClick();
+                  onExploreCurriculum();
+                }}
+                className="px-6 py-3.5 rounded-xl bg-[#141826] hover:bg-[#1c2236] text-slate-200 hover:text-white border border-slate-700/80 font-semibold text-sm sm:text-base transition-all hover:scale-[1.02] active:scale-[0.98] flex items-center gap-2"
+                id="hero-curriculum-btn"
+              >
+                <Calendar className="w-4 h-4 text-blue-400" />
+                Explore Cohort Courses
+              </button>
+            )}
 
             <button
               onClick={() => {

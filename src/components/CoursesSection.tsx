@@ -51,7 +51,14 @@ export const CoursesSection: React.FC<CoursesSectionProps> = ({
     return () => { isMounted = false; };
   }, [coursesProp]);
 
-  const activeCoursesList = coursesProp ? coursesProp : courses;
+  const activeCoursesList = (coursesProp ? coursesProp : courses).filter(
+    course => course.isPublished !== false
+  );
+
+  // If all masterclass courses are hidden by admin, completely hide the entire section (heading, subtext, container)
+  if (!activeCoursesList || activeCoursesList.length === 0) {
+    return null;
+  }
 
   return (
     <section className="py-16 bg-[#0c0e18] text-slate-100 border-t border-slate-800" id="courses-section">

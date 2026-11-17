@@ -31,6 +31,7 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
   const [instructorRole, setInstructorRole] = useState('Lead Documentary Editor');
   const [instructorAvatar, setInstructorAvatar] = useState('https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=150&q=80');
   const [isPopular, setIsPopular] = useState(false);
+  const [isPublished, setIsPublished] = useState(true);
   const [highlights, setHighlights] = useState<string[]>([
     '26 Days of Interactive Live Classes (Mon–Fri, 3:30 PM IST)',
     'Every Saturday Dedicated Doubt Clearing & Timeline Review'
@@ -55,12 +56,15 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
       setInstructorRole(courseToEdit.instructorRole || 'Lead Editor');
       setInstructorAvatar(courseToEdit.instructorAvatar || '');
       setIsPopular(Boolean(courseToEdit.isPopular));
+      setIsPublished(courseToEdit.isPublished !== false);
       setHighlights(courseToEdit.highlights?.length ? courseToEdit.highlights : ['Live 90-Min Daily Cohort']);
       setWhatYouWillLearnLink(courseToEdit.whatYouWillLearnLink || '');
     } else {
       setTitle('');
       setSubtitle('');
       setDescription('');
+      setIsPopular(false);
+      setIsPublished(true);
       setHighlights(['Live 90-Min Daily Classes', 'Dedicated Saturday Doubt Session']);
       setWhatYouWillLearnLink('');
     }
@@ -105,6 +109,7 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
       instructorRole: instructorRole.trim(),
       instructorAvatar: instructorAvatar.trim(),
       isPopular: isPopular,
+      isPublished: isPublished,
       whatYouWillLearnLink: whatYouWillLearnLink.trim()
     };
 
@@ -291,7 +296,7 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
               />
             </div>
 
-            <div className="flex flex-col justify-end">
+            <div className="flex flex-col justify-end gap-2">
               <label className="flex items-center gap-2 cursor-pointer p-2 bg-[#161a29] border border-slate-700/80 rounded-xl">
                 <input
                   type="checkbox"
@@ -300,6 +305,18 @@ export const AddEditCourseModal: React.FC<AddEditCourseModalProps> = ({
                   className="rounded text-blue-500 focus:ring-0"
                 />
                 <span className="text-xs font-semibold text-slate-200">Highlight as "MOST POPULAR"</span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer p-2 bg-[#161a29] border border-slate-700/80 rounded-xl">
+                <input
+                  type="checkbox"
+                  checked={isPublished}
+                  onChange={e => setIsPublished(e.target.checked)}
+                  className="rounded text-emerald-500 focus:ring-0"
+                />
+                <span className="text-xs font-semibold text-slate-200">
+                  {isPublished ? 'Visible on Landing Page' : 'Hidden from Students (Draft)'}
+                </span>
               </label>
             </div>
           </div>
